@@ -50,16 +50,34 @@ git add -A && git commit -m "Add Maya" && git push
 
 The schedule is baked into each page, so these do not update themselves.
 
-1. **Update Anna's calendar first** — drop the PDF in the Drive folder
-   `New Schedule PDFs — Drop Here`, run the normal update (`/anna-calendar`).
-   This regenerates `../ANNA VCOM calendar/repo/build/index.html`.
-2. `python3 derive.py --all`
-3. `git add -A && git commit -m "Schedule update" && git push`
+**The easy way — one command, from the `Claude/` folder:**
+
+```
+./update-calendars.sh /path/to/new-schedule.pdf
+```
+
+That runs Anna's pipeline (parse → safety gate → build → push) and, only if it
+passes, runs `sync.sh` here to rebuild and push every classmate calendar. You
+normally trigger this by telling Claude "update the calendars" after dropping the
+PDF in the Drive folder — the `update-calendars` skill fetches the PDF and runs
+this script.
+
+**By hand, if you ever need to run just this half:**
+
+```
+./sync.sh                    # after Anna's build/index.html is already updated
+```
 
 Vercel redeploys every calendar. All links stay the same. Each classmate's
 to-dos and edits survive — they live in the browser, keyed per calendar — with
 the same caveats as Anna's: a class the school *moves* comes back unticked, and
 hand-typed to-dos stay on the date they were written.
+
+## One-time setup on a new Mac
+
+- `python3 -m pip install --user pymupdf` — the PDF parser Anna's pipeline needs
+- import `finnhoops/vcom-class-calendars` at vercel.com (Output Directory:
+  `build`) to create the Vercel project
 
 If `derive.py` aborts with "anchor moved", Anna's page changed shape and the
 matching string in `derive.py` needs a tweak; the schedule content is fine.
