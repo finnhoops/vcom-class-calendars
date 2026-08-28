@@ -1,6 +1,6 @@
 {
-  "_comment": "Every VCOM classmate calendar. Rebuild with `python3 derive.py --all` after Anna's calendar is updated, then git push -> Vercel redeploys all of them. Anna's own calendar is NOT here; it has its own pipeline.",
-  "site": "vcom-class-calendars.vercel.app",
+  "_comment": "Every VCOM classmate calendar. Rebuild with `python3 derive.py --all` after Anna's calendar is updated, then git push -> GitHub Pages redeploys all of them. Anna's own calendar is NOT here; it has its own pipeline.",
+  "site": "finnhoops.github.io/vcom-class-calendars",
   "calendars": [
     {
       "slug": "calendar",
@@ -10,7 +10,7 @@
     {
       "slug": "chloe",
       "name": "Chloe",
-      "path": "/chloe"
+      "path": "/chloe/"
     }
   ]
 }

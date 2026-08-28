@@ -12,17 +12,19 @@ changed:
   4. the footer / theme-note copy    -> de-personalised
 
 The schedule itself is whatever is baked into Anna's build at the moment this
-runs. Output is a full standalone HTML file per calendar, written to build/,
-which Vercel serves:
+runs. Output is a full standalone HTML file per calendar under docs/, which
+GitHub Pages serves (main branch, /docs folder):
 
-    build/index.html    -> vcom-class-calendars.vercel.app          (generic)
-    build/calendar.html -> vcom-class-calendars.vercel.app/calendar (generic)
-    build/chloe.html    -> vcom-class-calendars.vercel.app/chloe
+    docs/index.html        -> <site>/           (generic)
+    docs/calendar/index.html -> <site>/calendar/ (generic)
+    docs/chloe/index.html  -> <site>/chloe/
+
+<site> is https://finnhoops.github.io/vcom-class-calendars
 
 Update flow when a new PDF comes out:
   1. update Anna's calendar the normal way (regenerates repo/build/index.html)
   2. python3 derive.py --all
-  3. git commit + push   ->  Vercel redeploys every calendar, links unchanged
+  3. git commit + push   ->  Pages redeploys every calendar, links unchanged
 
 Usage:
   python3 derive.py --name "Chloe" --slug chloe
@@ -38,7 +40,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SOURCE = HERE.parent / "ANNA VCOM calendar" / "repo" / "build" / "index.html"
 REGISTRY = HERE / "registry.json"
-BUILD = HERE / "build"
+# GitHub Pages serves this repo from main:/docs. Each calendar is its own
+# folder so the URL is clean: docs/chloe/index.html -> <site>/chloe/
+DOCS = HERE / "docs"
 
 APOS = "’"  # the curly apostrophe the page's typography uses
 
@@ -132,15 +136,17 @@ def load_registry():
 
 def write_calendar(slug, name, label):
     html = derive(slug, name, label)
-    (BUILD / f"{slug}.html").write_text(html, encoding="utf-8")
-    written = [f"build/{slug}.html"]
-    # the generic one is also the site root
+    # Each calendar is served from its own folder as index.html, so the URL is
+    # <site>/chloe/ with no file extension.
+    targets = [DOCS / slug / "index.html"]
+    # The generic one is also the site root.
     if slug == "calendar":
-        (BUILD / "index.html").write_text(html, encoding="utf-8")
-        written.append("build/index.html")
-    for w in written:
-        kb = (HERE / w).stat().st_size / 1024
-        print(f"wrote {w}  ({kb:.0f} KB)")
+        targets.append(DOCS / "index.html")
+    for t in targets:
+        t.parent.mkdir(parents=True, exist_ok=True)
+        t.write_text(html, encoding="utf-8")
+        rel = t.relative_to(HERE)
+        print(f"wrote {rel}  ({t.stat().st_size / 1024:.0f} KB)")
 
 
 def main():
@@ -152,7 +158,8 @@ def main():
                     help="rebuild every calendar listed in registry.json")
     args = ap.parse_args()
 
-    BUILD.mkdir(exist_ok=True)
+    DOCS.mkdir(exist_ok=True)
+    (DOCS / ".nojekyll").touch()  # serve files as-is, skip Jekyll processing
     reg = load_registry()
 
     if args.all:
@@ -175,7 +182,7 @@ def main():
                 entry["label"] = args.label
             else:
                 entry["name"] = args.name
-            entry["path"] = "/" if args.slug == "calendar" else f"/{args.slug}"
+            entry["path"] = "/" if args.slug == "calendar" else f"/{args.slug}/"
             reg["calendars"].append(entry)
             REGISTRY.write_text(json.dumps(reg, indent=2) + "\n", encoding="utf-8")
             print(f"added {args.slug} to registry.json")
