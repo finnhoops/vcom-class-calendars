@@ -46,6 +46,6 @@ site = reg.get("site", "vcom-class-calendars.vercel.app")
 print(f"\n{len(reg['calendars'])} calendars live on https://{site} :")
 for c in reg["calendars"]:
     name = c.get("label") or f"{c['name']}’s Calendar"
-    path = c.get("path", f"/{c['slug']}")
-    print(f"  {name:<22} https://{site}{'' if path == '/' else path}")
+    path = c.get("path", f"/{c['slug']}/")
+    print(f"  {name:<22} https://{site}{path}")
 PY
