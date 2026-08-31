@@ -11,6 +11,11 @@
       "slug": "chloe",
       "name": "Chloe",
       "path": "/chloe/"
+    },
+    {
+      "slug": "claire",
+      "name": "Claire",
+      "path": "/claire/"
     }
   ]
 }
