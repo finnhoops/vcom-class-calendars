@@ -39,6 +39,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SOURCE = HERE.parent / "ANNA VCOM calendar" / "repo" / "build" / "index.html"
+# The build id lives next to Anna's build; each derived calendar gets a copy in
+# its own folder so the page's freshness check can fetch <folder>/version.json
+# and reload itself when a newer build is published.
+VERSION_SRC = SOURCE.parent / "version.json"
 REGISTRY = HERE / "registry.json"
 # GitHub Pages serves this repo from main:/docs. Each calendar is its own
 # folder so the URL is clean: docs/chloe/index.html -> <site>/chloe/
@@ -142,11 +146,14 @@ def write_calendar(slug, name, label):
     # The generic one is also the site root.
     if slug == "calendar":
         targets.append(DOCS / "index.html")
+    version_json = VERSION_SRC.read_text(encoding="utf-8") if VERSION_SRC.exists() else None
     for t in targets:
         t.parent.mkdir(parents=True, exist_ok=True)
         t.write_text(html, encoding="utf-8")
         rel = t.relative_to(HERE)
         print(f"wrote {rel}  ({t.stat().st_size / 1024:.0f} KB)")
+        if version_json is not None:
+            (t.parent / "version.json").write_text(version_json, encoding="utf-8")
 
 
 def main():
