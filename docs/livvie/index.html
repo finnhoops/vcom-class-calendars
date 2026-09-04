@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Livvie’s Calendar</title>
 <meta name="description" content="Livvie’s Calendar — VCOM Block 1 schedule and a personal to-do list.">
-<meta name="build" content="20260904-114521">
+<meta name="build" content="20260904-121649">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,200..800&family=Public+Sans:wght@300;400;500;600;800&display=swap" rel="stylesheet">
@@ -2225,7 +2225,7 @@ function monthCell(date, month){
 }
 
 /* ---- week -------------------------------------------------------------- */
-const H_START = 8, H_END = 19, PX = 88;   // 8 AM–6 PM; nothing in the block runs later, and taller rows give the topic line room
+const H_START = 8, H_END = 21, PX = 88;   // 8 AM–8 PM, per Anna; taller rows still give the topic line room
 
 function renderWeek(){
   const start = startOfWeek(cursor);
