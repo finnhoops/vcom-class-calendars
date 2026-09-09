@@ -21,6 +21,11 @@
       "slug": "livvie",
       "name": "Livvie",
       "path": "/livvie/"
+    },
+    {
+      "slug": "peyton",
+      "name": "Peyton",
+      "path": "/peyton/"
     }
   ]
 }
