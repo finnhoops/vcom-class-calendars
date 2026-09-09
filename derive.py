@@ -60,7 +60,7 @@ def must_replace(text, old, new, label):
     return text.replace(old, new)
 
 
-def derive(slug: str, name: str = None, label: str = None) -> str:
+def derive(slug: str, name: str = None, label: str = None, student: int = 0) -> str:
     if not SOURCE.exists():
         sys.exit(f"derive.py: can't find Anna's build at {SOURCE}")
     html = SOURCE.read_text(encoding="utf-8")
@@ -95,6 +95,17 @@ def derive(slug: str, name: str = None, label: str = None) -> str:
         'const KEY = "anna-vcom-cal-v1";',
         f'const KEY = "vcom-cal-{slug}-v1";',
         "storage key",
+    )
+
+    # 2b. Clinical Skills cohort filter -- Anna's build ships hers (9). Give
+    #     each classmate their own number from registry.json, or 0 (= show
+    #     every cohort) when we don't know it. Without this every classmate
+    #     would inherit Anna's 9 and lose the rest of the rotations.
+    html = must_replace(
+        html,
+        "const STUDENT_NUMBER = 9;",
+        f"const STUDENT_NUMBER = {int(student or 0)};",
+        "student number",
     )
 
     # 3. disable the STUDY 1.0 to-do engine ---------------------------
@@ -138,8 +149,8 @@ def load_registry():
     return {"calendars": []}
 
 
-def write_calendar(slug, name, label):
-    html = derive(slug, name, label)
+def write_calendar(slug, name, label, student=0):
+    html = derive(slug, name, label, student)
     # Each calendar is served from its own folder as index.html, so the URL is
     # <site>/chloe/ with no file extension.
     targets = [DOCS / slug / "index.html"]
@@ -161,6 +172,9 @@ def main():
     ap.add_argument("--name", help='first name, e.g. "Chloe" -> "Chloe’s Calendar"')
     ap.add_argument("--label", help='verbatim page name, e.g. "Calendar"')
     ap.add_argument("--slug", help="url-safe id, e.g. chloe")
+    ap.add_argument("--student", type=int, default=None,
+                    help="this person's student number, for the Clinical Skills "
+                         "cohort filter; omit or 0 to show every cohort")
     ap.add_argument("--all", action="store_true",
                     help="rebuild every calendar listed in registry.json")
     args = ap.parse_args()
@@ -170,16 +184,17 @@ def main():
     reg = load_registry()
 
     if args.all:
-        targets = [(c["slug"], c.get("name"), c.get("label")) for c in reg["calendars"]]
+        targets = [(c["slug"], c.get("name"), c.get("label"), int(c.get("student") or 0))
+                   for c in reg["calendars"]]
         if not targets:
             sys.exit("registry.json has no calendars yet.")
     else:
         if not (args.slug and (args.name or args.label)):
             sys.exit("give --slug plus --name or --label, or use --all")
-        targets = [(args.slug, args.name, args.label)]
+        targets = [(args.slug, args.name, args.label, int(args.student or 0))]
 
-    for slug, name, label in targets:
-        write_calendar(slug, name, label)
+    for slug, name, label, student in targets:
+        write_calendar(slug, name, label, student)
 
     if not args.all:
         known = {c["slug"] for c in reg["calendars"]}
@@ -189,6 +204,8 @@ def main():
                 entry["label"] = args.label
             else:
                 entry["name"] = args.name
+            if args.student:
+                entry["student"] = args.student
             entry["path"] = "/" if args.slug == "calendar" else f"/{args.slug}/"
             reg["calendars"].append(entry)
             REGISTRY.write_text(json.dumps(reg, indent=2) + "\n", encoding="utf-8")
