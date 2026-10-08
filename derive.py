@@ -108,6 +108,16 @@ def derive(slug: str, name: str = None, label: str = None, student: int = 0) -> 
         "student number",
     )
 
+    # 2c. Anna turned her own to-do column off; classmates still get one (empty,
+    #     the STUDY 1.0 engine disabled below, hand-filled only) -- flip her
+    #     SHOW_TODOS back on for every derived calendar.
+    html = must_replace(
+        html,
+        "const SHOW_TODOS = false;",
+        "const SHOW_TODOS = true;",
+        "show-todos flag",
+    )
+
     # 3. disable the STUDY 1.0 to-do engine ---------------------------
     html = must_replace(
         html,
