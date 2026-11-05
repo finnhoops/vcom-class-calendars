@@ -11,11 +11,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one centered work column — patient card, syringe label, three-step answer form, feedback below. */
+/* Layout: one centered work column. Recall = patient card + answer form. Case = a running case log, newest step at the bottom. */
 :root{
   --bg:#EEF2F4; --surface:#FFFFFF; --fg:#16232D; --muted:#5A6A76; --line:#D3DCE2;
   --accent:#0E6A75; --accent-fg:#FFFFFF; --good:#1C7C3F; --good-bg:#E3F3E8; --bad:#B42318; --bad-bg:#FBE8E6; --warn:#8A5A00; --warn-bg:#FFF3D6;
   --field:#F7F9FA;
+  --mon-bg:#05090B; --mon-hr:#4BE37E; --mon-bp:#F2F2F2; --mon-sp:#4FD8F0; --mon-co:#F5D547; --mon-alert:#FF5C5C;
   --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
@@ -32,16 +33,22 @@
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
 .wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+main{display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-direction:column;gap:12px}
+.hrow{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
 h1{font-family:var(--f-display);font-weight:700;font-size:2rem;letter-spacing:.01em;margin:0;line-height:1;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:700;font-size:1.5rem;margin:0;line-height:1.1;text-wrap:balance}
 .sub{color:var(--muted);font-size:.9rem;margin:4px 0 0}
 .score{display:flex;gap:14px;font-family:var(--f-mono);font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .score b{color:var(--fg);font-weight:500}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px;align-self:flex-start}
+.tab{font:inherit;font-weight:700;border:0;background:transparent;color:var(--muted);padding:8px 16px;border-radius:7px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-fg)}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
 details.settings summary,details.ref summary{cursor:pointer;font-weight:700;font-size:.95rem}
 .setgrid{display:grid;gap:14px;margin-top:14px}
 .setrow{display:flex;flex-direction:column;gap:6px}
-.setrow > span{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.setrow > span,.eyebrow,legend{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1px solid var(--line);background:var(--field);color:var(--fg);border-radius:999px;padding:5px 12px;font:inherit;font-size:.85rem;cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
@@ -49,185 +56,198 @@ details.settings summary,details.ref summary{cursor:pointer;font-weight:700;font
 .ptline{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline}
 .ptline .who{font-weight:700;font-size:1.15rem}
 .ptline .wt{font-family:var(--f-mono);font-size:1.15rem;font-weight:500}
-.ctx{margin:0;color:var(--fg)}
+.ctx{margin:0}
 .label{display:flex;align-items:stretch;border-radius:6px;overflow:hidden;border:1px solid var(--line);max-width:420px}
-.label .band{width:64px;flex:none;position:relative}
-.label .band.striped{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.95) 0 6px,transparent 6px 14px)!important}
+.label .band{width:64px;flex:none}
+.label .band.striped{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.95) 0 6px,transparent 6px 14px)}
 .label .txt{padding:8px 14px;background:#FFFFFF;color:#111111;flex:1;min-width:0}
 .label .dname{font-family:var(--f-display);font-weight:700;font-size:1.6rem;line-height:1.05;text-transform:uppercase;letter-spacing:.02em}
-.label .dsub{font-family:var(--f-mono);font-size:.82rem;color:#333}
+.label .dsub{font-family:var(--f-mono);font-size:.82rem;color:#333333}
 .task{background:var(--field);border-radius:8px;padding:10px 14px;font-weight:700}
 .task small{display:block;font-weight:400;color:var(--muted);font-size:.85rem}
 form{display:flex;flex-direction:column;gap:16px}
 fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
-legend{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;padding:0}
+legend{margin-bottom:6px;padding:0}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .row label{font-size:.92rem}
-.in{display:flex;align-items:center;border:1px solid var(--line);border-radius:7px;background:var(--field);overflow:hidden}
+.in{display:flex;align-items:center;border:1px solid var(--line);border-radius:7px;background:var(--field);overflow:hidden;max-width:100%}
 .in input{width:7.5em;border:0;background:transparent;color:var(--fg);font-family:var(--f-mono);font-size:1rem;padding:9px 10px;min-width:0}
+.in input.wide{width:18em}
 .in select{border:0;border-left:1px solid var(--line);background:transparent;color:var(--fg);font:inherit;font-size:.9rem;padding:9px 6px}
+.in select:first-child{border-left:0}
 .in .u{padding:0 10px;color:var(--muted);font-size:.9rem;border-left:1px solid var(--line);align-self:stretch;display:flex;align-items:center}
-.in:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.in:focus-within,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+textarea{width:100%;min-height:11em;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--fg);font-family:var(--f-mono);font-size:.95rem;padding:10px;resize:vertical}
 .plus{color:var(--muted);font-family:var(--f-mono)}
 .hint{font-size:.8rem;color:var(--muted);margin:0}
 .btns{display:flex;flex-wrap:wrap;gap:10px}
 button.b{font:inherit;font-weight:700;border-radius:8px;padding:10px 18px;cursor:pointer;border:1px solid var(--accent)}
 button.primary{background:var(--accent);color:var(--accent-fg)}
 button.ghost{background:transparent;color:var(--accent)}
-button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:focus-visible,.chip:focus-visible,.tab:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .fb{display:flex;flex-direction:column;gap:8px}
 .verdict{font-family:var(--f-display);font-weight:700;font-size:1.5rem;letter-spacing:.02em}
 .verdict.ok{color:var(--good)} .verdict.no{color:var(--bad)}
 .step{border-radius:8px;padding:8px 12px;font-size:.93rem;display:flex;gap:10px}
 .step .mk{font-weight:700;flex:none;width:1.1em}
-.step.ok{background:var(--good-bg);color:var(--fg)} .step.ok .mk{color:var(--good)}
-.step.no{background:var(--bad-bg);color:var(--fg)} .step.no .mk{color:var(--bad)}
-.step.warn{background:var(--warn-bg);color:var(--fg)} .step.warn .mk{color:var(--warn)}
+.step.ok{background:var(--good-bg)} .step.ok .mk{color:var(--good)}
+.step.no{background:var(--bad-bg)} .step.no .mk{color:var(--bad)}
+.step.warn{background:var(--warn-bg)} .step.warn .mk{color:var(--warn)}
 .work{border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
 .work h3{margin:0 0 6px;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .work ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px}
-.mono{font-family:var(--f-mono);font-size:.92em}
 .tblwrap{overflow-x:auto;margin-top:12px}
 table{border-collapse:collapse;width:100%;font-size:.85rem}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .sw{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-1px;margin-right:6px;border:1px solid var(--line)}
-@media (prefers-reduced-motion:no-preference){.fb{animation:rise .2s ease-out}@keyframes rise{from{transform:translateY(4px)}to{transform:none}}}
+/* case mode */
+.card{display:flex;flex-direction:column;gap:12px}
+.card.active{border-color:var(--accent);border-width:2px}
+.card p{margin:0}
+.cart{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.92rem;background:var(--field);border-radius:8px;padding:10px 14px}
+.cart .k{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-top:3px}
+.cart .v{font-family:var(--f-mono);font-size:.88rem;min-width:0}
+.echo{font-family:var(--f-mono);font-size:.88rem;background:var(--field);border-radius:8px;padding:8px 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.echo::before{content:"You: ";color:var(--muted)}
+.seqcmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seqcmp ol{margin:4px 0 0;padding-left:1.4em;font-size:.92rem}
+.seqcmp li.ok::marker{color:var(--good)} .seqcmp li.no{color:var(--bad)}
+@media (max-width:480px){.seqcmp{grid-template-columns:1fr}}
+.mon{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:2px;background:var(--mon-bg);border-radius:8px;padding:4px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.m{padding:8px 12px;display:flex;flex-direction:column;min-width:0}
+.ml{font-size:.72rem;letter-spacing:.08em}
+.mv{font-size:2rem;line-height:1.1;font-weight:500}
+.ms{font-size:.74rem;opacity:.85}
+.m.hr{color:var(--mon-hr)} .m.bp{color:var(--mon-bp)} .m.sp{color:var(--mon-sp)} .m.co{color:var(--mon-co)}
+.dl{font-size:.95rem;margin-left:6px;color:var(--mon-alert)}
+.toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+@media (prefers-reduced-motion:no-preference){.fb,.card.active{animation:rise .2s ease-out}@keyframes rise{from{transform:translateY(4px)}to{transform:none}}}
 </style>
 
 <div class="wrap">
   <header>
-    <div>
-      <h1>Anesthesia Dose Drills</h1>
-      <p class="sub">Doses and concentrations from the MHSA Adult Drug Card. Adult patients, 40 and up.</p>
+    <div class="hrow">
+      <div>
+        <h1>Anesthesia Dose Drills</h1>
+        <p class="sub">Doses and concentrations from the MHSA Adult Drug Card. Adult patients, 40 and up.</p>
+      </div>
+      <div class="score" aria-live="polite" id="score"></div>
     </div>
-    <div class="score" aria-live="polite">
-      <span>Correct <b id="sc-ok">0</b>/<b id="sc-n">0</b></span>
-      <span>Streak <b id="sc-st">0</b></span>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="t-recall" aria-controls="recall">Recall</button>
+      <button class="tab" role="tab" id="t-case" aria-controls="case">Case practice</button>
     </div>
   </header>
 
-  <details class="panel settings" id="settings">
-    <summary>Practice settings</summary>
-    <div class="setgrid">
-      <div class="setrow"><span>Drug groups</span><div class="chips" id="cats"></div></div>
-      <div class="setrow"><span>Patient weight shown in</span><div class="chips" id="wtmode"></div></div>
-      <div class="setrow"><span>Dose</span><div class="chips" id="dosemode"></div></div>
-      <div class="setrow"><span>Infusions</span><div class="chips" id="infmode"></div></div>
-    </div>
-  </details>
-
-  <section class="panel patient" id="patient" aria-live="polite"></section>
-
-  <section class="panel">
-    <form id="ans" autocomplete="off" novalidate>
-      <fieldset>
-        <legend>1 · Dose for this patient</legend>
-        <div class="row">
-          <div class="in"><input id="a-dose" inputmode="decimal" aria-label="Dose"><select id="a-dose-u" aria-label="Dose unit"></select></div>
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend id="lg-prep">2 · How you draw it up</legend>
-        <div class="row">
-          <label for="a-drug">Drug</label>
-          <div class="in"><input id="a-drug" inputmode="decimal"><span class="u">mL</span></div>
-          <span class="plus">+</span>
-          <label for="a-ns">Saline</label>
-          <div class="in"><input id="a-ns" inputmode="decimal" placeholder="0"><span class="u">mL</span></div>
-        </div>
-        <div class="row">
-          <label for="a-conc">Final concentration</label>
-          <div class="in"><input id="a-conc" inputmode="decimal"><select id="a-conc-u" aria-label="Concentration unit"></select></div>
-        </div>
-        <p class="hint" id="prep-hint">Not diluting? Put how much you draw from the vial under Drug, and leave Saline blank.</p>
-      </fieldset>
-      <fieldset>
-        <legend id="lg-give">3 · Volume to give</legend>
-        <div class="row">
-          <div class="in"><input id="a-vol" inputmode="decimal" aria-label="Volume"><span class="u" id="vol-u">mL</span></div>
-        </div>
-      </fieldset>
-      <div class="btns">
-        <button class="b primary" type="submit">Check answer</button>
-        <button class="b ghost" type="button" id="b-show">Show answer</button>
-        <button class="b ghost" type="button" id="b-next">Next patient</button>
+  <!-- ================= RECALL ================= -->
+  <main id="recall" role="tabpanel" aria-labelledby="t-recall">
+    <details class="panel settings">
+      <summary>Practice settings</summary>
+      <div class="setgrid">
+        <div class="setrow"><span>Drug groups</span><div class="chips" id="cats"></div></div>
+        <div class="setrow"><span>Patient weight shown in</span><div class="chips" id="wtmode"></div></div>
+        <div class="setrow"><span>Dose</span><div class="chips" id="dosemode"></div></div>
+        <div class="setrow"><span>Infusions</span><div class="chips" id="infmode"></div></div>
       </div>
-    </form>
-  </section>
+    </details>
+    <section class="panel patient" id="r-patient" aria-live="polite"></section>
+    <section class="panel" id="r-formwrap"></section>
+    <section class="panel fb" id="r-fb" hidden></section>
+    <details class="panel ref">
+      <summary>Drug card reference</summary>
+      <div class="tblwrap"><table id="reftbl"><thead><tr><th>Drug</th><th>Trade</th><th>Class</th><th>Concentration</th><th>IV dose</th></tr></thead><tbody></tbody></table></div>
+    </details>
+  </main>
 
-  <section class="panel fb" id="fb" hidden></section>
-
-  <details class="panel ref">
-    <summary>Drug card reference</summary>
-    <div class="tblwrap"><table id="reftbl"><thead><tr><th>Drug</th><th>Trade</th><th>Class</th><th>Concentration</th><th>IV dose</th></tr></thead><tbody></tbody></table></div>
-  </details>
+  <!-- ================= CASE ================= -->
+  <main id="case" role="tabpanel" aria-labelledby="t-case" hidden>
+    <div class="panel toolbar">
+      <div class="setrow"><span>Events per case</span><div class="chips" id="evcount"></div></div>
+      <button class="b ghost" type="button" id="c-new">New case</button>
+    </div>
+    <div id="c-feed" style="display:flex;flex-direction:column;gap:16px"></div>
+  </main>
 </div>
 
+<datalist id="actions"></datalist>
+
 <script>
-// ---- Drug card data (base units: mcg, or units for vasopressin) ----
-// dose.t: 'kg' (per kg bolus), 'fix' (flat bolus), 'inf'. dose.u: unit the card uses. per: for infusions 'kg/hr' | 'kg/min' | 'min'
-// col: ISO 26825 label color; st: striped (antagonist / reversal / hypotensive)
+// ================= DRUG CARD DATA =================
+// Base units: mcg (or units for vasopressin). dose.t: 'kg' | 'fix' | 'inf'. col = ISO 26825 syringe label colour, st = striped.
 const C={ind:'#FFE500',benzo:'#F68B1F',opi:'#5BC4F1',nmb:'#FF4F4F',anti:'#9ACA3C',vaso:'#B48ED8',la:'#9A9A9A',ae:'#F4A79D',oth:'#FFFFFF'};
 const D=[
- {id:'propofol',n:'Propofol',tr:'Diprivan',cls:'Diisopropylphenol',cat:'Induction',col:C.ind,stocks:[10000],card:'10mg/mL',du:'mg',dose:{t:'kg',min:1,max:2.5},tg:[1,1.5,2,2.5],cx:['Induction for a laparoscopic cholecystectomy.','Induction for a total knee replacement under general.','Induction for an elective inguinal hernia repair.']},
- {id:'etomidate',n:'Etomidate',tr:'Amidate',cls:'Carboxylated imidazole',cat:'Induction',col:C.ind,stocks:[2000],card:'2mg/mL',du:'mg',dose:{t:'kg',min:0.2,max:0.5},tg:[0.2,0.3,0.4],cx:['Induction for a patient with severe aortic stenosis.','Induction for a hypotensive trauma patient.','Induction for a patient with an EF of 25%.']},
- {id:'ketamine',n:'Ketamine',tr:'Ketalar',cls:'Phencyclidine',cat:'Induction',col:C.ind,stocks:[10000,50000,100000],card:'5-100mg/mL',du:'mg',dose:{t:'kg',min:1,max:2},tg:[1,1.5,2],dil:{50000:[2,8],100000:[1,9]},cx:['Induction for a hypotensive patient with a GI bleed.','Induction for a patient with severe asthma.']},
- {id:'midazolam',n:'Midazolam',tr:'Versed',cls:'Benzodiazepine',cat:'Sedatives',col:C.benzo,stocks:[1000,5000],card:'1 or 5mg/mL',du:'mg',dose:{t:'fix',min:1,max:5},tg:[1,2,3,4,5],dil:{5000:[2,8]},cx:['Pre-op anxiolysis for a very anxious patient in holding.','Sedation before placing a regional block.']},
- {id:'diazepam',n:'Diazepam',tr:'Valium',cls:'Benzodiazepine',cat:'Sedatives',col:C.benzo,stocks:[5000,10000],card:'5 or 10mg/mL',du:'mg',dose:{t:'fix',min:5,max:10},tg:[5,10],cx:['Pre-op anxiolysis ordered as diazepam.','Seizure activity in PACU.']},
- {id:'flumazenil',n:'Flumazenil',tr:'Romazicon',cls:'Benzodiazepine antagonist',cat:'Sedatives',col:C.benzo,st:1,stocks:[100],card:'0.1mg/mL',du:'mg',dose:{t:'fix',min:0.2,max:1},tg:[0.2,0.3,0.5,1],cx:['Over-sedated after midazolam in endoscopy, RR 6.','Reversing benzodiazepine sedation in PACU.']},
- {id:'dexmed',n:'Dexmedetomidine',tr:'Precedex',cls:'Alpha-2 agonist',cat:'Sedatives',col:C.oth,stocks:[100],card:'100mcg/mL',du:'mcg',dose:{t:'inf',per:'kg/hr',min:0.2,max:0.7},tg:[0.2,0.3,0.4,0.5,0.6,0.7],dil:{100:[2,48]},cx:['Sedation infusion for an awake fiberoptic intubation.','Sedation infusion for a carotid endarterectomy under regional.','Sedation infusion in the ICU after cardiac surgery.']},
- {id:'morphine',n:'Morphine',tr:'Duramorph',cls:'Opioid',cat:'Narcotics',col:C.opi,stocks:[1000,10000],card:'1 or 10mg/mL',du:'mg',dose:{t:'kg',min:0.05,max:0.2},tg:[0.05,0.1],dil:{10000:[1,9]},cx:['Long-acting analgesia before emergence from an open colectomy.','Analgesia before emergence from a hip replacement.']},
- {id:'hydromorphone',n:'Hydromorphone',tr:'Dilaudid',cls:'Opioid',cat:'Narcotics',col:C.opi,stocks:[1000,2000],card:'1-2mg/mL',du:'mg',dose:{t:'fix',min:0.2,max:2},tg:[0.2,0.4,0.5,1],dil:{1000:[2,8],2000:[1,9]},cx:['PACU pain after spine surgery, pain 8/10.','Analgesia at the end of an exploratory laparotomy.']},
- {id:'fentanyl',n:'Fentanyl',tr:'Sublimaze',cls:'Opioid',cat:'Narcotics',col:C.opi,stocks:[50],card:'50mcg/mL',du:'mcg',dose:{t:'kg',min:0.5,max:2},tg:[0.5,1,1.5,2],cx:['Before induction, to blunt the response to laryngoscopy.','Extra analgesia at skin incision.']},
- {id:'remi',n:'Remifentanil',tr:'Ultiva',cls:'Opioid',cat:'Narcotics',col:C.opi,stocks:[2000],card:'2mg/mL',du:'mcg',dose:{t:'inf',per:'kg/min',min:0.05,max:0.3},tg:[0.05,0.1,0.15,0.2,0.25,0.3],dil:{2000:[1,39]},cx:['TIVA maintenance for a spine case with neuromonitoring.','Remifentanil infusion for a craniotomy.']},
- {id:'naloxone',n:'Naloxone',tr:'Narcan',cls:'Opioid antagonist',cat:'Narcotics',col:C.opi,st:1,stocks:[400],card:'0.4mg/mL',du:'mg',dose:{t:'fix',min:0.04,max:0.08},tg:[0.04,0.08],dil:{400:[1,9]},cx:['Opioid respiratory depression in PACU, RR 5 and hard to wake.','Titrating opioid reversal without losing all analgesia.']},
- {id:'ondansetron',n:'Ondansetron',tr:'Zofran',cls:'5-HT3 antagonist',cat:'Antiemetics',col:C.ae,stocks:[2000],card:'2mg/mL',du:'mg',dose:{t:'fix',min:4,max:8},tg:[4,8],cx:['PONV prophylaxis near the end of the case.','Patient vomiting in PACU.']},
- {id:'dexamethasone',n:'Dexamethasone',tr:'Decadron',cls:'Corticosteroid',cat:'Antiemetics',col:C.oth,stocks:[4000,10000],card:'4 or 10mg/mL',du:'mg',dose:{t:'fix',min:4,max:12},tg:[4,8,10],cx:['PONV prophylaxis after induction.','Airway edema prophylaxis before a long prone case.']},
- {id:'metoclopramide',n:'Metoclopramide',tr:'Reglan',cls:'Cholinomimetic',cat:'Antiemetics',col:C.ae,stocks:[10000],card:'10mg/mL',du:'mg',dose:{t:'kg',min:0.25,max:0.25},tg:[0.25],cx:['Aspiration prophylaxis for a diabetic with gastroparesis.','PONV rescue in PACU.']},
- {id:'sux',n:'Succinylcholine',tr:'Anectine',cls:'Depolarizing MR',cat:'Muscle relaxants',col:C.nmb,stocks:[20000],card:'20mg/mL',du:'mg',dose:{t:'kg',min:1,max:1.5},tg:[1,1.5],cx:['Rapid sequence induction for a full stomach.','RSI for an emergency appendectomy.']},
- {id:'roc',n:'Rocuronium',tr:'Zemuron',cls:'Non-depolarizing MR',cat:'Muscle relaxants',col:C.nmb,stocks:[10000],card:'10mg/mL',du:'mg',dose:{t:'kg',min:0.6,max:1.2},tg:[0.6,1,1.2],cx:['Intubating dose for an elective case.','Modified RSI where succinylcholine is contraindicated.']},
- {id:'vec',n:'Vecuronium',tr:'Norcuron',cls:'Non-depolarizing MR',cat:'Muscle relaxants',col:C.nmb,stocks:[1000],card:'1mg/mL',du:'mg',dose:{t:'kg',min:0.08,max:0.12},tg:[0.08,0.1,0.12],cx:['Intubating dose for an elective case.','Paralysis for a long abdominal case.']},
- {id:'cis',n:'Cisatracurium',tr:'Nimbex',cls:'Non-depolarizing MR',cat:'Muscle relaxants',col:C.nmb,stocks:[2000],card:'2mg/mL',du:'mg',dose:{t:'kg',min:0.1,max:0.15},tg:[0.1,0.15],cx:['Intubating dose for a patient in renal failure.','Paralysis for a patient with liver failure.']},
- {id:'neo',n:'Neostigmine',tr:'Prostigmin',cls:'Cholinesterase inhibitor',cat:'Reversal',col:C.nmb,st:1,stocks:[500,1000],card:'0.5-1mg/mL',du:'mg',dose:{t:'kg',min:0.04,max:0.08},tg:[0.04,0.05,0.07],cx:['Reversal at the end of the case, TOF 4/4 with fade.','Reversing residual rocuronium.'],tip:'Many places cap neostigmine at 5 mg total, regardless of weight.'},
- {id:'suga',n:'Sugammadex',tr:'Bridion',cls:'Direct MR inhibitor',cat:'Reversal',col:C.nmb,st:1,stocks:[100000],card:'100mg/mL',du:'mg',dose:{t:'kg',min:2,max:16,disc:[2,4,16]},tg:[2,4,16],cxBy:{2:'Reversing rocuronium; TOF shows 2 twitches.',4:'Deep rocuronium block: TOF 0, post-tetanic count 1-2.',16:'Can\'t intubate, can\'t ventilate after rocuronium 1.2 mg/kg. Immediate reversal.'}},
- {id:'glyco',n:'Glycopyrrolate',tr:'Robinul',cls:'Cholinergic antagonist',cat:'Anticholinergics',col:C.anti,stocks:[200],card:'0.2mg/mL',du:'mg',dose:{t:'kg',min:0.01,max:0.02},tg:[0.01,0.015,0.02],cx:['Given with neostigmine for reversal.','Bradycardia with secretions, HR 45.']},
- {id:'atropine',n:'Atropine',tr:'Atropine',cls:'Cholinergic antagonist',cat:'Anticholinergics',col:C.anti,stocks:[100,400],card:'0.1-0.4mg/mL',du:'mg',dose:{t:'kg',min:0.01,max:0.03},tg:[0.01,0.02],cx:['Symptomatic bradycardia, HR 38 and BP falling.','Bradycardia during insufflation.']},
- {id:'phenyl',n:'Phenylephrine',tr:'Neosynephrine',cls:'Alpha-1 agonist',cat:'Adrenergic',col:C.vaso,stocks:[10000],card:'10mg/mL',du:'mcg',dose:{t:'fix',min:50,max:200},tg:[50,80,100,120,160,200],dil:{10000:[1,99]},cx:['Post-induction hypotension, BP 78/40, HR 92.','Hypotension after positioning, HR 88.']},
- {id:'ephedrine',n:'Ephedrine',tr:'Ephedra',cls:'Adrenergic agonist',cat:'Adrenergic',col:C.vaso,stocks:[50000],card:'50mg/mL',du:'mg',dose:{t:'fix',min:5,max:25},tg:[5,10,15,20,25],dil:{50000:[1,9]},cx:['Post-induction hypotension, BP 80/45, HR 52.','Hypotension with a slow heart rate after induction.']},
- {id:'epi',n:'Epinephrine',tr:'Adrenaline',cls:'Adrenergic agonist',cat:'Adrenergic',col:C.vaso,stocks:[1000],card:'1mg/mL',du:'mcg',dose:{t:'inf',per:'min',min:2,max:20},tg:[2,4,5,8,10,15,20],dil:{1000:[1,249]},cx:['Refractory septic shock. Start an infusion.','Low cardiac output coming off bypass.']},
- {id:'norepi',n:'Norepinephrine',tr:'Levophed',cls:'Adrenergic agonist',cat:'Adrenergic',col:C.vaso,stocks:[1000],card:'1mg/mL',du:'mcg',dose:{t:'inf',per:'min',min:2,max:20},tg:[2,4,5,8,10,12,15,20],dil:{1000:[4,246]},cx:['Septic shock, MAP 55 despite fluids.','Vasoplegia after induction in a patient on an ACE inhibitor.']},
- {id:'vaso',n:'Vasopressin',tr:'Vasostrict',cls:'ADH agonist',cat:'Adrenergic',col:C.vaso,stocks:[20],card:'20units/mL',du:'units',dose:{t:'fix',min:1,max:2},tg:[1,2],dil:{20:[1,19]},cx:['Refractory hypotension in a patient on an ACE inhibitor; phenylephrine isn\'t working.','Vasoplegia not responding to norepinephrine.']},
- {id:'labetalol',n:'Labetalol',tr:'Trandate',cls:'Adrenergic antagonist',cat:'Adrenergic',col:C.vaso,st:1,stocks:[5000],card:'5mg/mL',du:'mg',dose:{t:'fix',min:5,max:20},tg:[5,10,15,20],cx:['Hypertension on emergence, BP 190/105, HR 98.','BP 185/100 in PACU with adequate pain control.']},
- {id:'esmolol',n:'Esmolol',tr:'Brevibloc',cls:'Beta antagonist',cat:'Adrenergic',col:C.vaso,st:1,stocks:[10000],card:'10mg/mL',du:'mg',dose:{t:'kg',min:0.2,max:0.5},tg:[0.2,0.3,0.5],cx:['HR 135 during laryngoscopy.','Blunting the intubation response in a patient with CAD.']},
- {id:'metoprolol',n:'Metoprolol',tr:'Lopressor',cls:'Beta antagonist',cat:'Adrenergic',col:C.vaso,st:1,stocks:[1000],card:'1mg/mL',du:'mg',dose:{t:'fix',min:1,max:5},tg:[1,2,2.5,5],cx:['Sinus tachycardia of 125 in PACU with pain controlled.','New AFib with RVR during the case.']},
- {id:'lido',n:'Lidocaine',tr:'Xylocaine',cls:'Amide',cat:'Local anesthetics',col:C.la,stocks:[20000],card:'20mg/mL (2%)',du:'mg',dose:{t:'kg',min:1.5,max:1.5},tg:[1.5],cx:['Before propofol, to blunt the injection sting and the airway response.','Blunting cough on emergence.']},
+ {id:'propofol',n:'Propofol',tr:'Diprivan',cls:'Diisopropylphenol',cat:'Induction',col:C.ind,stocks:[10000],card:'10mg/mL',du:'mg',dose:{t:'kg',min:1,max:2.5},tg:[1,1.5,2,2.5],al:['propofol','diprivan'],cx:['Induction for a laparoscopic cholecystectomy.','Induction for a total knee replacement under general.','Induction for an elective inguinal hernia repair.']},
+ {id:'etomidate',n:'Etomidate',tr:'Amidate',cls:'Carboxylated imidazole',cat:'Induction',col:C.ind,stocks:[2000],card:'2mg/mL',du:'mg',dose:{t:'kg',min:0.2,max:0.5},tg:[0.2,0.3,0.4],al:['etomidate','amidate'],cx:['Induction for a patient with severe aortic stenosis.','Induction for a hypotensive trauma patient.','Induction for a patient with an EF of 25%.']},
+ {id:'ketamine',n:'Ketamine',tr:'Ketalar',cls:'Phencyclidine',cat:'Induction',col:C.ind,stocks:[10000,50000,100000],card:'5-100mg/mL',du:'mg',dose:{t:'kg',min:1,max:2},tg:[1,1.5,2],dil:{50000:[2,8],100000:[1,9]},al:['ketamine','ketalar'],cx:['Induction for a hypotensive patient with a GI bleed.','Induction for a patient with severe asthma.']},
+ {id:'midazolam',n:'Midazolam',tr:'Versed',cls:'Benzodiazepine',cat:'Sedatives',col:C.benzo,stocks:[1000,5000],card:'1 or 5mg/mL',du:'mg',dose:{t:'fix',min:1,max:5},tg:[1,2,3,4,5],dil:{5000:[2,8]},al:['midazolam','versed','midaz'],cx:['Pre-op anxiolysis for a very anxious patient in holding.','Sedation before placing a regional block.']},
+ {id:'diazepam',n:'Diazepam',tr:'Valium',cls:'Benzodiazepine',cat:'Sedatives',col:C.benzo,stocks:[5000,10000],card:'5 or 10mg/mL',du:'mg',dose:{t:'fix',min:5,max:10},tg:[5,10],al:['diazepam','valium'],cx:['Pre-op anxiolysis ordered as diazepam.','Seizure activity in PACU.']},
+ {id:'flumazenil',n:'Flumazenil',tr:'Romazicon',cls:'Benzodiazepine antagonist',cat:'Sedatives',col:C.benzo,st:1,stocks:[100],card:'0.1mg/mL',du:'mg',dose:{t:'fix',min:0.2,max:1},tg:[0.2,0.3,0.5,1],al:['flumazenil','romazicon'],cx:['Over-sedated after midazolam in endoscopy, RR 6.','Reversing benzodiazepine sedation in PACU.']},
+ {id:'dexmed',n:'Dexmedetomidine',tr:'Precedex',cls:'Alpha-2 agonist',cat:'Sedatives',col:C.oth,stocks:[100],card:'100mcg/mL',du:'mcg',dose:{t:'inf',per:'kg/hr',min:0.2,max:0.7},tg:[0.2,0.3,0.4,0.5,0.6,0.7],dil:{100:[2,48]},al:['dexmedetomidine','precedex','dexmed'],cx:['Sedation infusion for an awake fiberoptic intubation.','Sedation infusion for a carotid endarterectomy under regional.','Sedation infusion in the ICU after cardiac surgery.']},
+ {id:'morphine',n:'Morphine',tr:'Duramorph',cls:'Opioid',cat:'Narcotics',col:C.opi,stocks:[1000,10000],card:'1 or 10mg/mL',du:'mg',dose:{t:'kg',min:0.05,max:0.2},tg:[0.05,0.1],dil:{10000:[1,9]},al:['morphine','duramorph'],cx:['Long-acting analgesia before emergence from an open colectomy.','Analgesia before emergence from a hip replacement.']},
+ {id:'hydromorphone',n:'Hydromorphone',tr:'Dilaudid',cls:'Opioid',cat:'Narcotics',col:C.opi,stocks:[1000,2000],card:'1-2mg/mL',du:'mg',dose:{t:'fix',min:0.2,max:2},tg:[0.2,0.4,0.5,1],dil:{1000:[2,8],2000:[1,9]},al:['hydromorphone','dilaudid'],cx:['PACU pain after spine surgery, pain 8/10.','Analgesia at the end of an exploratory laparotomy.']},
+ {id:'fentanyl',n:'Fentanyl',tr:'Sublimaze',cls:'Opioid',cat:'Narcotics',col:C.opi,stocks:[50],card:'50mcg/mL',du:'mcg',dose:{t:'kg',min:0.5,max:2},tg:[0.5,1,1.5,2],al:['fentanyl','sublimaze','fent'],cx:['Before induction, to blunt the response to laryngoscopy.','Extra analgesia at skin incision.']},
+ {id:'remi',n:'Remifentanil',tr:'Ultiva',cls:'Opioid',cat:'Narcotics',col:C.opi,stocks:[2000],card:'2mg/mL',du:'mcg',dose:{t:'inf',per:'kg/min',min:0.05,max:0.3},tg:[0.05,0.1,0.15,0.2,0.25,0.3],dil:{2000:[1,39]},al:['remifentanil','ultiva','remi'],cx:['TIVA maintenance for a spine case with neuromonitoring.','Remifentanil infusion for a craniotomy.']},
+ {id:'naloxone',n:'Naloxone',tr:'Narcan',cls:'Opioid antagonist',cat:'Narcotics',col:C.opi,st:1,stocks:[400],card:'0.4mg/mL',du:'mg',dose:{t:'fix',min:0.04,max:0.08},tg:[0.04,0.08],dil:{400:[1,9]},al:['naloxone','narcan'],cx:['Opioid respiratory depression in PACU, RR 5 and hard to wake.','Titrating opioid reversal without losing all analgesia.']},
+ {id:'ondansetron',n:'Ondansetron',tr:'Zofran',cls:'5-HT3 antagonist',cat:'Antiemetics',col:C.ae,stocks:[2000],card:'2mg/mL',du:'mg',dose:{t:'fix',min:4,max:8},tg:[4,8],al:['ondansetron','zofran'],cx:['PONV prophylaxis near the end of the case.','Patient vomiting in PACU.']},
+ {id:'dexamethasone',n:'Dexamethasone',tr:'Decadron',cls:'Corticosteroid',cat:'Antiemetics',col:C.oth,stocks:[4000,10000],card:'4 or 10mg/mL',du:'mg',dose:{t:'fix',min:4,max:12},tg:[4,8,10],al:['dexamethasone','decadron'],cx:['PONV prophylaxis after induction.','Airway edema prophylaxis before a long prone case.']},
+ {id:'metoclopramide',n:'Metoclopramide',tr:'Reglan',cls:'Cholinomimetic',cat:'Antiemetics',col:C.ae,stocks:[10000],card:'10mg/mL',du:'mg',dose:{t:'kg',min:0.25,max:0.25},tg:[0.25],al:['metoclopramide','reglan'],cx:['Aspiration prophylaxis for a diabetic with gastroparesis.','PONV rescue in PACU.']},
+ {id:'sux',n:'Succinylcholine',tr:'Anectine',cls:'Depolarizing MR',cat:'Muscle relaxants',col:C.nmb,stocks:[20000],card:'20mg/mL',du:'mg',dose:{t:'kg',min:1,max:1.5},tg:[1,1.5],al:['succinylcholine','anectine','sux','succ'],cx:['Rapid sequence induction for a full stomach.','RSI for an emergency appendectomy.']},
+ {id:'roc',n:'Rocuronium',tr:'Zemuron',cls:'Non-depolarizing MR',cat:'Muscle relaxants',col:C.nmb,stocks:[10000],card:'10mg/mL',du:'mg',dose:{t:'kg',min:0.6,max:1.2},tg:[0.6,1,1.2],al:['rocuronium','zemuron','roc'],cx:['Intubating dose for an elective case.','Modified RSI where succinylcholine is contraindicated.']},
+ {id:'vec',n:'Vecuronium',tr:'Norcuron',cls:'Non-depolarizing MR',cat:'Muscle relaxants',col:C.nmb,stocks:[1000],card:'1mg/mL',du:'mg',dose:{t:'kg',min:0.08,max:0.12},tg:[0.08,0.1,0.12],al:['vecuronium','norcuron','vec'],cx:['Intubating dose for an elective case.','Paralysis for a long abdominal case.']},
+ {id:'cis',n:'Cisatracurium',tr:'Nimbex',cls:'Non-depolarizing MR',cat:'Muscle relaxants',col:C.nmb,stocks:[2000],card:'2mg/mL',du:'mg',dose:{t:'kg',min:0.1,max:0.15},tg:[0.1,0.15],al:['cisatracurium','nimbex','cis'],cx:['Intubating dose for a patient in renal failure.','Paralysis for a patient with liver failure.']},
+ {id:'neo',n:'Neostigmine',tr:'Prostigmin',cls:'Cholinesterase inhibitor',cat:'Reversal',col:C.nmb,st:1,stocks:[500,1000],card:'0.5-1mg/mL',du:'mg',dose:{t:'kg',min:0.04,max:0.08},tg:[0.04,0.05,0.07],al:['neostigmine','prostigmin'],cx:['Reversal at the end of the case, TOF 4/4 with fade.','Reversing residual rocuronium.'],tip:'Many places cap neostigmine at 5 mg total, regardless of weight.'},
+ {id:'suga',n:'Sugammadex',tr:'Bridion',cls:'Direct MR inhibitor',cat:'Reversal',col:C.nmb,st:1,stocks:[100000],card:'100mg/mL',du:'mg',dose:{t:'kg',min:2,max:16,disc:[2,4,16]},tg:[2,4,16],al:['sugammadex','bridion','suga'],cxBy:{2:'Reversing rocuronium; TOF shows 2 twitches.',4:'Deep rocuronium block: TOF 0, post-tetanic count 1-2.',16:'Can\'t intubate, can\'t ventilate after rocuronium 1.2 mg/kg. Immediate reversal.'}},
+ {id:'glyco',n:'Glycopyrrolate',tr:'Robinul',cls:'Cholinergic antagonist',cat:'Anticholinergics',col:C.anti,stocks:[200],card:'0.2mg/mL',du:'mg',dose:{t:'kg',min:0.01,max:0.02},tg:[0.01,0.015,0.02],al:['glycopyrrolate','robinul','glyco','glycopyrolate'],cx:['Given with neostigmine for reversal.','Bradycardia with secretions, HR 45.']},
+ {id:'atropine',n:'Atropine',tr:'Atropine',cls:'Cholinergic antagonist',cat:'Anticholinergics',col:C.anti,stocks:[100,400],card:'0.1-0.4mg/mL',du:'mg',dose:{t:'kg',min:0.01,max:0.03},tg:[0.01,0.02],al:['atropine'],cx:['Symptomatic bradycardia, HR 38 and BP falling.','Bradycardia during insufflation.']},
+ {id:'phenyl',n:'Phenylephrine',tr:'Neosynephrine',cls:'Alpha-1 agonist',cat:'Adrenergic',col:C.vaso,stocks:[10000],card:'10mg/mL',du:'mcg',dose:{t:'fix',min:50,max:200},tg:[50,80,100,120,160,200],dil:{10000:[1,99]},al:['phenylephrine','neosynephrine','neo-synephrine','phenyl','neo synephrine'],cx:['Post-induction hypotension, BP 78/40, HR 92.','Hypotension after positioning, HR 88.']},
+ {id:'ephedrine',n:'Ephedrine',tr:'Ephedra',cls:'Adrenergic agonist',cat:'Adrenergic',col:C.vaso,stocks:[50000],card:'50mg/mL',du:'mg',dose:{t:'fix',min:5,max:25},tg:[5,10,15,20,25],dil:{50000:[1,9]},al:['ephedrine','ephedra','ephedrin'],cx:['Post-induction hypotension, BP 80/45, HR 52.','Hypotension with a slow heart rate after induction.']},
+ {id:'epi',n:'Epinephrine',tr:'Adrenaline',cls:'Adrenergic agonist',cat:'Adrenergic',col:C.vaso,stocks:[1000],card:'1mg/mL',du:'mcg',dose:{t:'inf',per:'min',min:2,max:20},tg:[2,4,5,8,10,15,20],dil:{1000:[1,249]},al:['epinephrine','adrenaline','epi'],cx:['Refractory septic shock. Start an infusion.','Low cardiac output coming off bypass.']},
+ {id:'norepi',n:'Norepinephrine',tr:'Levophed',cls:'Adrenergic agonist',cat:'Adrenergic',col:C.vaso,stocks:[1000],card:'1mg/mL',du:'mcg',dose:{t:'inf',per:'min',min:2,max:20},tg:[2,4,5,8,10,12,15,20],dil:{1000:[4,246]},al:['norepinephrine','levophed','norepi','levo'],cx:['Septic shock, MAP 55 despite fluids.','Vasoplegia after induction in a patient on an ACE inhibitor.']},
+ {id:'vaso',n:'Vasopressin',tr:'Vasostrict',cls:'ADH agonist',cat:'Adrenergic',col:C.vaso,stocks:[20],card:'20units/mL',du:'units',dose:{t:'fix',min:1,max:2},tg:[1,2],dil:{20:[1,19]},al:['vasopressin','vasostrict','vaso'],cx:['Refractory hypotension in a patient on an ACE inhibitor; phenylephrine isn\'t working.','Vasoplegia not responding to norepinephrine.']},
+ {id:'labetalol',n:'Labetalol',tr:'Trandate',cls:'Adrenergic antagonist',cat:'Adrenergic',col:C.vaso,st:1,stocks:[5000],card:'5mg/mL',du:'mg',dose:{t:'fix',min:5,max:20},tg:[5,10,15,20],al:['labetalol','trandate','labetolol'],cx:['Hypertension on emergence, BP 190/105, HR 98.','BP 185/100 in PACU with adequate pain control.']},
+ {id:'esmolol',n:'Esmolol',tr:'Brevibloc',cls:'Beta antagonist',cat:'Adrenergic',col:C.vaso,st:1,stocks:[10000],card:'10mg/mL',du:'mg',dose:{t:'kg',min:0.2,max:0.5},tg:[0.2,0.3,0.5],al:['esmolol','brevibloc'],cx:['HR 135 during laryngoscopy.','Blunting the intubation response in a patient with CAD.']},
+ {id:'metoprolol',n:'Metoprolol',tr:'Lopressor',cls:'Beta antagonist',cat:'Adrenergic',col:C.vaso,st:1,stocks:[1000],card:'1mg/mL',du:'mg',dose:{t:'fix',min:1,max:5},tg:[1,2,2.5,5],al:['metoprolol','lopressor','metoprolol tartrate','metoprocol'],cx:['Sinus tachycardia of 125 in PACU with pain controlled.','New AFib with RVR during the case.']},
+ {id:'lido',n:'Lidocaine',tr:'Xylocaine',cls:'Amide',cat:'Local anesthetics',col:C.la,stocks:[20000],card:'20mg/mL (2%)',du:'mg',dose:{t:'kg',min:1.5,max:1.5},tg:[1.5],al:['lidocaine','xylocaine','lido'],cx:['Before propofol, to blunt the injection sting and the airway response.','Blunting cough on emergence.']},
+ // Not on the drug card: from the Basic Maintenance notes (2.5-5 mg IV slowly). 20 mg/mL is the usual vial.
+ {id:'hydral',n:'Hydralazine',tr:'Apresoline',cls:'Direct vasodilator',cat:'Not on card',notCard:1,col:C.vaso,st:1,stocks:[20000],card:'20mg/mL',du:'mg',dose:{t:'fix',min:2.5,max:5},tg:[2.5,5],al:['hydralazine','apresoline','hydralizine'],cx:[]},
 ];
-const CATS=[...new Set(D.map(d=>d.cat))];
+const byId=Object.fromEntries(D.map(d=>[d.id,d]));
+const CARD=D.filter(d=>!d.notCard);
+const CATS=[...new Set(CARD.map(d=>d.cat)),'Gases'];
+// Inhalation agents from the drug card. MAC % at age 40; lower by 5% of that value for each full decade over 40. col = vaporizer colour.
+const GASES=[{id:'sevo',n:'Sevoflurane',tr:'Ultane',mac:2,col:'#FFD100'},{id:'iso',n:'Isoflurane',tr:'Forane',mac:1.2,col:'#8E4FB8'},{id:'des',n:'Desflurane',tr:'Suprane',mac:6,col:'#2F6FD6'}];
+const decades=age=>Math.max(0,Math.floor((age-40)/10));
+const adjMac=(mac,age)=>mac*(1-0.05*decades(age));
+const macOk=(v,mac,age)=>v!=null&&(Math.abs(v-adjMac(mac,age))<=adjMac(mac,age)*0.02||Math.abs(v-mac*(1-0.05*Math.max(0,(age-40)/10)))<=mac*0.02);
+function macWork(g,age){
+  const n=decades(age),a=adjMac(g.mac,age);
+  return n?`${g.n} MAC on the card (age 40) is ${g.mac}%. A ${age}-year-old is ${n} full decade${n>1?'s':''} over 40, so take off ${n} × 5% = ${n*5}%: ${g.mac} × ${sig(1-0.05*n)} = <b>${sig(a)}%</b>.`
+           :`${g.n} MAC on the card (age 40) is ${g.mac}%. A ${age}-year-old isn't a full decade over 40 yet, so it stays <b>${g.mac}%</b>.`;
+}
 
-// ---- helpers ----
+// ================= HELPERS =================
 const $=s=>document.querySelector(s);
 const LB=2.20462;
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const sig=(x,p=3)=>{if(!isFinite(x))return '—';const v=Number(x.toPrecision(p));return Math.abs(v)>=1000?Math.round(v).toLocaleString():String(v)};
-const num=s=>{const v=parseFloat(String(s).replace(/,/g,'').trim());return isFinite(v)?v:null};
+const num=s=>{const v=parseFloat(String(s??'').replace(/,/g,'').trim());return isFinite(v)?v:null};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const isUnits=d=>d.du==='units';
 const isInf=d=>d.dose.t==='inf';
-// mass: mcg base. dose unit factor
-const DU={mg:1000,mcg:1,units:1,'mcg/min':1,'mcg/hr':1/60,'mg/hr':1000/60};
+const DU={mg:1000,mcg:1,units:1,'mcg/min':1,'mcg/hr':1/60};
 const CU={'mg/mL':1000,'mcg/mL':1,'units/mL':1};
-function fmtAmt(base,d){ // base mcg (or units) -> card unit
-  if(isUnits(d))return sig(base)+' units';
-  return d.du==='mg'?sig(base/1000)+' mg':sig(base)+' mcg';
-}
+const opts=(list,def)=>list.map(u=>`<option${u===def?' selected':''}>${u}</option>`).join('');
+function fmtAmt(base,d){if(isUnits(d))return sig(base)+' units';return d.du==='mg'?sig(base/1000)+' mg':sig(base)+' mcg'}
 function fmtConc(base,d){
   if(isUnits(d))return sig(base)+' units/mL';
   if(d.du==='mg')return sig(base/1000)+' mg/mL';
   return base>=1000?sig(base/1000)+' mg/mL':sig(base)+' mcg/mL';
 }
-function doseUnitStr(d){const u=d.du;if(!isInf(d))return u+'/kg';return d.dose.per==='kg/hr'?'mcg/kg/hr':d.dose.per==='kg/min'?'mcg/kg/min':'mcg/min'}
+function doseUnitStr(d){if(!isInf(d))return d.du+'/kg';return d.dose.per==='kg/hr'?'mcg/kg/hr':d.dose.per==='kg/min'?'mcg/kg/min':'mcg/min'}
 function cardDose(d){
   const x=d.dose;
   if(x.disc)return x.disc.join(', ')+' mg/kg';
@@ -236,176 +256,502 @@ function cardDose(d){
   if(x.t==='fix')return r+' '+d.du;
   return r+' '+doseUnitStr(d);
 }
+function labelHTML(d,stock){
+  return `<div class="label"><div class="band${d.st?' striped':''}" style="background-color:${d.col}"></div>
+    <div class="txt"><div class="dname">${d.n}</div><div class="dsub">${d.tr} · vial ${fmtConc(stock,d)}</div></div></div>`;
+}
 
-// ---- settings ----
-const S={cats:CATS.slice(),wt:'mix',dm:'mix',inf:'on'};
+// ================= DOSE QUESTION ENGINE (shared by both modes) =================
+function makeQ(d,o){
+  const wKg=o.showLb?o.lb/LB:o.kg;
+  const f=isUnits(d)?1:(d.du==='mg'?1000:1);
+  const per=x=>d.dose.t==='kg'?x*wKg*f:d.dose.t==='fix'?x*f:d.dose.per==='kg/hr'?x*wKg/60:d.dose.per==='kg/min'?x*wKg:x;
+  return {d,stock:o.stock,kg:o.kg,lb:o.lb,showLb:!!o.showLb,wKg,mode:o.mode,tgt:o.tgt,exp:o.mode==='target'?per(o.tgt):null,lo:per(d.dose.min),hi:per(d.dose.max)};
+}
+function fmtDose(q,base){
+  if(isInf(q.d))return sig(base)+' mcg/min'+(q.d.dose.per==='kg/hr'?` (${sig(base*60)} mcg/hr)`:'');
+  return fmtAmt(base,q.d);
+}
+function formHTML(p,q,sup,extra=''){
+  const d=q.d,inf=isInf(d);
+  const du=inf?['mcg/min','mcg/hr']:isUnits(d)?['units']:['mg','mcg'];
+  const def=inf?(d.dose.per==='kg/hr'?'mcg/hr':'mcg/min'):d.du;
+  const cu=isUnits(d)?['units/mL']:['mg/mL','mcg/mL'];
+  const cdef=isUnits(d)?'units/mL':(d.du==='mg'?'mg/mL':'mcg/mL');
+  const cont=sup?`<div class="row"><label for="${p}-cont">Into a</label><div class="in"><select id="${p}-cont"><option value="">Choose…</option>${sup.syr.map(s=>`<option value="s${s}">${s} mL syringe</option>`).join('')}${sup.bags.map(b=>`<option value="b${b}">${b} mL NS bag</option>`).join('')}</select></div></div>`:'';
+  return `<form id="${p}-form" autocomplete="off" novalidate>
+    <fieldset><legend>Dose for this patient</legend><div class="row"><div class="in"><input id="${p}-dose" inputmode="decimal" aria-label="Dose"><select id="${p}-dose-u" aria-label="Dose unit">${opts(du,def)}</select></div></div></fieldset>
+    <fieldset><legend>${inf?'How you make the infusion':'How you draw it up'}</legend>
+      <div class="row"><label for="${p}-drug">Drug</label><div class="in"><input id="${p}-drug" inputmode="decimal"><span class="u">mL</span></div>
+        <span class="plus">+</span><label for="${p}-ns">Saline</label><div class="in"><input id="${p}-ns" inputmode="decimal" placeholder="0"><span class="u">mL</span></div></div>
+      ${cont}
+      <div class="row"><label for="${p}-conc">Final concentration</label><div class="in"><input id="${p}-conc" inputmode="decimal"><select id="${p}-conc-u" aria-label="Concentration unit">${opts(cu,cdef)}</select></div></div>
+      <p class="hint">Leave saline blank if you aren't adding any.</p>
+    </fieldset>
+    <fieldset><legend>${inf?'Pump rate':'Volume to give'}</legend><div class="row"><div class="in"><input id="${p}-vol" inputmode="decimal" aria-label="${inf?'Pump rate':'Volume to give'}"><span class="u">${inf?'mL/hr':'mL'}</span></div></div></fieldset>
+    <div class="btns"><button class="b primary" type="submit">Check answer</button>${extra}</div>
+  </form>`;
+}
+function readForm(p){
+  const g=id=>document.getElementById(p+'-'+id);
+  return {dose:num(g('dose').value),doseU:g('dose-u').value,drug:num(g('drug').value),ns:num(g('ns').value)??0,
+    conc:num(g('conc').value),concU:g('conc-u').value,vol:num(g('vol').value),cont:g('cont')?g('cont').value:null};
+}
+function echoHTML(q,v){
+  const inf=isInf(q.d);
+  const parts=[`${v.dose??'?'} ${v.doseU}`,`${v.drug??'?'} mL drug${v.ns?` + ${v.ns} mL saline`:''}`];
+  if(v.cont)parts.push('in a '+(v.cont[0]==='s'?v.cont.slice(1)+' mL syringe':v.cont.slice(1)+' mL NS bag'));
+  parts.push(`= ${v.conc??'?'} ${v.concU}`,`${inf?'run at':'give'} ${v.vol??'?'} ${inf?'mL/hr':'mL'}`);
+  return `<div class="echo">${esc(parts.join(' · '))}</div>`;
+}
+const near=(a,b,tol)=>Math.abs(a-b)<=Math.abs(b)*tol;
+function unitHint(got,want){const r=got/want;return (r>800&&r<1200)||(r>0.0008&&r<0.0012)?'. Check mg vs mcg':''}
+function gradeDose(q,v,sup){
+  const d=q.d,inf=isInf(d),out=[];let ok=true;
+  const no=t=>{ok=false;out.push(['no',t])};
+  const uDose=v.dose!=null?v.dose*DU[v.doseU]:null;
+  // 1. dose
+  if(uDose==null)no('Enter the dose.');
+  else if(q.mode==='target'){
+    if(near(uDose,q.exp,0.05))out.push(['ok',`Dose ${fmtDose(q,uDose)} is right.`]);
+    else no(`Dose ${fmtDose(q,uDose)} is off. Expected about ${fmtDose(q,q.exp)}${unitHint(uDose,q.exp)}.`);
+  }else{
+    if(uDose>=q.lo*0.98&&uDose<=q.hi*1.02)out.push(['ok',`Dose ${fmtDose(q,uDose)} is within the card range (${fmtDose(q,q.lo)} to ${fmtDose(q,q.hi)} for this patient).`]);
+    else no(`Dose ${fmtDose(q,uDose)} is outside the card range of ${cardDose(d)}, which is ${fmtDose(q,q.lo)} to ${fmtDose(q,q.hi)} for this patient${unitHint(uDose,(q.lo+q.hi)/2)}.`);
+  }
+  // 2. prep
+  let actual=null;
+  if(v.drug==null||v.drug<=0)no('Enter how many mL of drug you draw up.');
+  else{
+    actual=q.stock*v.drug/(v.drug+v.ns);
+    const desc=`${sig(v.drug)} mL of ${fmtConc(q.stock,d)}${v.ns?` + ${sig(v.ns)} mL saline`:''}`;
+    const uConc=v.conc!=null?v.conc*CU[v.concU]:null;
+    if(uConc==null)no(`Enter your final concentration. ${desc} makes ${fmtConc(actual,d)}.`);
+    else if(near(uConc,actual,0.025))out.push(['ok',`${desc} = ${fmtConc(actual,d)}. Concentration is right.`]);
+    else no(`${desc} makes ${fmtConc(actual,d)}, not ${fmtConc(uConc,d)}. Total drug ÷ total volume: ${fmtAmt(q.stock*v.drug,d)} ÷ ${sig(v.drug+v.ns)} mL.`);
+    if(!inf&&uDose!=null&&q.stock*v.drug<uDose*0.99)no(`That only puts ${fmtAmt(q.stock*v.drug,d)} of drug in your syringe, less than the ${fmtDose(q,uDose)} you plan to give. Draw up more.`);
+    // container (case mode)
+    if(sup){
+      const tot=v.drug+v.ns;
+      if(!v.cont)no('Choose the syringe or bag you are using.');
+      else if(v.cont[0]==='s'){
+        const cap=+v.cont.slice(1);
+        if(tot>cap+0.01){ if(v.ns>0)no(`${sig(tot)} mL won't fit in a ${cap} mL syringe.`); else out.push(['warn',`${sig(tot)} mL won't fit in one ${cap} mL syringe. You'd need more than one.`]) }
+      }else{
+        const bag=+v.cont.slice(1);
+        if(!near(v.ns,bag,0.03))no(`If you're adding drug to the ${bag} mL bag, the saline is the bag: ${bag} mL, not ${sig(v.ns)} mL.`);
+      }
+    }else if(!inf&&v.drug+v.ns>60)out.push(['warn',`That's ${sig(v.drug+v.ns)} mL total, more than a 60 mL syringe. Fine if you mean a bag.`]);
+  }
+  // 3. volume / rate
+  if(v.vol==null)no(inf?'Enter the pump rate.':'Enter the volume to give.');
+  else if(actual!=null&&uDose!=null){
+    const want=inf?uDose*60/actual:uDose/actual;
+    const good=near(v.vol,want,0.04)||Math.abs(v.vol-want)<=0.05;
+    if(good)out.push(['ok',inf?`${sig(v.vol)} mL/hr delivers your dose at ${fmtConc(actual,d)}.`:`${sig(v.vol)} mL at ${fmtConc(actual,d)} = ${fmtDose(q,v.vol*actual)}. Volume is right.`]);
+    else no(inf?`At ${fmtConc(actual,d)}, ${fmtDose(q,uDose)} needs ${sig(want)} mL/hr, not ${sig(v.vol)}. (mcg/min × 60 ÷ mcg/mL)`:`At ${fmtConc(actual,d)}, ${fmtDose(q,uDose)} is ${sig(want)} mL, not ${sig(v.vol)} mL.`);
+    if(!inf&&good){
+      if(v.vol<0.25)no(`${sig(v.vol)} mL is too small to measure accurately. This one needs diluting.`);
+      else if(v.vol<0.5)out.push(['warn',`${sig(v.vol)} mL is hard to push precisely. Diluting would give you a volume you can measure.`]);
+    }
+  }
+  return {ok,out};
+}
+function prepSuggestion(q,sup,exp){
+  const d=q.d,dl=d.dil&&d.dil[q.stock];
+  const syr=sup?sup.syr:null,maxS=syr?Math.max(...syr):60;
+  const fitSyr=ml=>syr?(syr.find(s=>s>=ml-0.001)??maxS):null;
+  if(!dl){
+    const ml=exp/q.stock,s=fitSyr(ml);
+    return {conc:q.stock,text:`Draw it straight from the vial at ${fmtConc(q.stock,d)}${s?` into a ${s} mL syringe`:''}.${d.id==='diazepam'?' Diazepam isn\'t usually diluted.':''}`};
+  }
+  const tot=dl[0]+dl[1];
+  if(tot<=maxS){
+    const conc=q.stock*dl[0]/tot,s=fitSyr(tot);
+    return {conc,text:`${dl[0]} mL of ${fmtConc(q.stock,d)} (${fmtAmt(q.stock*dl[0],d)}) + ${dl[1]} mL saline${s?` in a ${s} mL syringe`:''} = ${tot} mL at ${fmtConc(conc,d)}.`};
+  }
+  const bags=sup?sup.bags:[Math.round(tot)];
+  const B=bags.includes(100)&&tot<=101?100:bags.includes(250)&&tot>101?250:bags.slice().sort((a,b)=>Math.abs(a-tot)-Math.abs(b-tot))[0];
+  const conc=q.stock*dl[0]/(dl[0]+B);
+  return {conc,text:`${dl[0]} mL of ${fmtConc(q.stock,d)} (${fmtAmt(q.stock*dl[0],d)}) into a ${B} mL NS bag ≈ ${fmtConc(q.stock*dl[0]/B,d)}. Draw doses from the bag into a syringe.`};
+}
+function workedHTML(q,sup){
+  const d=q.d,L=[];
+  const exp=q.mode==='target'?q.exp:(q.lo+q.hi)/2;
+  const wline=q.showLb?`Weight: ${q.lb} lb ÷ 2.2 = ${sig(q.wKg)} kg.`:null;
+  if(d.dose.t==='kg'){
+    if(wline)L.push(wline);
+    L.push(q.mode==='target'?`Dose: ${q.tgt} ${d.du}/kg × ${sig(q.wKg)} kg = ${fmtDose(q,exp)}.`
+      :`Range: ${d.dose.min}–${d.dose.max} ${d.du}/kg × ${sig(q.wKg)} kg = ${fmtDose(q,q.lo)} to ${fmtDose(q,q.hi)}. Using the middle, ${fmtDose(q,exp)}.`);
+  }else if(d.dose.t==='fix'){
+    L.push(q.mode==='target'?`Dose: ${fmtDose(q,exp)} (flat dose).`:`Range: ${cardDose(d)} (flat dose). Using ${fmtDose(q,exp)}.`);
+  }else{
+    if(d.dose.per!=='min'){if(wline)L.push(wline);L.push(`Dose: ${q.tgt} ${doseUnitStr(d)} × ${sig(q.wKg)} kg = ${d.dose.per==='kg/hr'?sig(q.tgt*q.wKg)+' mcg/hr':sig(q.tgt*q.wKg)+' mcg/min'}.`)}
+    else L.push(`Dose: ${q.tgt} mcg/min (not weight-based).`);
+  }
+  const pr=prepSuggestion(q,sup,exp);
+  L.push('Prep: '+pr.text);
+  if(isInf(d))L.push(`Rate: ${sig(exp)} mcg/min × 60 = ${sig(exp*60)} mcg/hr ÷ ${fmtConc(pr.conc,d)} = ${sig(exp*60/pr.conc)} mL/hr.`);
+  else L.push(`Volume: ${fmtDose(q,exp)} ÷ ${fmtConc(pr.conc,d)} = ${sig(exp/pr.conc)} mL.`);
+  if(d.tip)L.push(d.tip);
+  if(d.notCard)L.push('Hydralazine isn\'t on the drug card. The dose is from your Basic Maintenance notes.');
+  if(d.dil)L.push('Other dilutions are fine too, as long as your numbers add up.');
+  return `<div class="work"><h3>Worked answer</h3><ol>${L.map(x=>`<li>${x}</li>`).join('')}</ol></div>`;
+}
+function resultHTML(r){
+  return `<div class="verdict ${r.ok?'ok':'no'}">${r.ok?'Correct':'Not quite'}</div>`+
+    r.out.map(([k,t])=>`<div class="step ${k}"><span class="mk">${k==='ok'?'✓':k==='no'?'✗':'!'}</span><span>${t}</span></div>`).join('');
+}
+
+// ================= STORAGE =================
+const S={cats:CATS.slice(),wt:'mix',dm:'mix',inf:'on',ev:3,mode:'recall'};
+const SC={ok:0,n:0,st:0,cases:0};
 try{Object.assign(S,JSON.parse(localStorage.getItem('dd-set')||'{}'))}catch(e){}
-const SC={ok:0,n:0,st:0};
 try{Object.assign(SC,JSON.parse(localStorage.getItem('dd-sc')||'{}'))}catch(e){}
+S.cats=S.cats.filter(c=>CATS.includes(c));if(!S.cats.length)S.cats=CATS.slice();
+if(!S.gasSeen){if(!S.cats.includes('Gases'))S.cats.push('Gases');S.gasSeen=1}
 function save(){try{localStorage.setItem('dd-set',JSON.stringify(S));localStorage.setItem('dd-sc',JSON.stringify(SC))}catch(e){}}
-function chips(el,opts,isOn,onTap){
+function renderScore(){
+  $('#score').innerHTML=S.mode==='recall'
+    ?`<span>Correct <b>${SC.ok}</b>/<b>${SC.n}</b></span><span>Streak <b>${SC.st}</b></span>`
+    :`<span>Cases finished <b>${SC.cases}</b></span>${CASE&&CASE.score.of?`<span>This case <b>${CASE.score.got}</b>/<b>${CASE.score.of}</b></span>`:''}`;
+}
+function chips(el,list,isOn,onTap,after){
   el.innerHTML='';
-  opts.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',isOn(v));
-    b.onclick=()=>{onTap(v);save();renderSettings()};el.appendChild(b)});
+  list.forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',isOn(v));
+    b.onclick=()=>{onTap(v);save();after()};el.appendChild(b)});
 }
-function renderSettings(){
-  chips($('#cats'),CATS.map(c=>[c,c]),c=>S.cats.includes(c),c=>{
-    if(S.cats.includes(c)){if(S.cats.length>1)S.cats=S.cats.filter(x=>x!==c)}else S.cats.push(c)});
-  chips($('#wtmode'),[['kg','kg'],['lb','lb'],['mix','Mix of both']],v=>S.wt===v,v=>S.wt=v);
-  chips($('#dosemode'),[['target','I tell you the dose'],['range','You pick from the card range'],['mix','Mix']],v=>S.dm===v,v=>S.dm=v);
-  chips($('#infmode'),[['on','Include infusions'],['off','Boluses only']],v=>S.inf===v,v=>S.inf=v);
-}
-function renderScore(){$('#sc-ok').textContent=SC.ok;$('#sc-n').textContent=SC.n;$('#sc-st').textContent=SC.st}
 
-// ---- scenario ----
-let Q=null;
-function newQ(){
-  let pool=D.filter(d=>S.cats.includes(d.cat)&&(S.inf==='on'||!isInf(d)));
-  if(!pool.length)pool=D.filter(d=>!isInf(d));
-  const d=rnd(pool);
-  const male=Math.random()<0.5;
-  const kg=male?ri(62,138):ri(50,118);
-  const age=ri(40,88);
+// ================= MODE TABS =================
+function setMode(m,fromHash){
+  S.mode=m;save();
+  $('#recall').hidden=m!=='recall';$('#case').hidden=m!=='case';
+  $('#t-recall').setAttribute('aria-selected',m==='recall');$('#t-case').setAttribute('aria-selected',m==='case');
+  if(!fromHash&&location.hash!=='#'+m)history.replaceState(null,'','#'+m);
+  if(m==='case'&&!CASE)newCase();
+  renderScore();
+}
+$('#t-recall').onclick=()=>setMode('recall');
+$('#t-case').onclick=()=>setMode('case');
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h==='recall'||h==='case')setMode(h,true)});
+
+// ================= RECALL MODE =================
+function renderSettings(){
+  const r=renderSettings;
+  chips($('#cats'),CATS.map(c=>[c,c]),c=>S.cats.includes(c),c=>{if(S.cats.includes(c)){if(S.cats.length>1)S.cats=S.cats.filter(x=>x!==c)}else S.cats.push(c)},r);
+  chips($('#wtmode'),[['kg','kg'],['lb','lb'],['mix','Mix of both']],v=>S.wt===v,v=>S.wt=v,r);
+  chips($('#dosemode'),[['target','I tell you the dose'],['range','You pick from the card range'],['mix','Mix']],v=>S.dm===v,v=>S.dm=v,r);
+  chips($('#infmode'),[['on','Include infusions'],['off','Boluses only']],v=>S.inf===v,v=>S.inf=v,r);
+}
+let RQ=null,rDone=false;
+function newRecall(){
+  let pool=CARD.filter(d=>S.cats.includes(d.cat)&&(S.inf==='on'||!isInf(d)));
+  if(S.cats.includes('Gases'))pool=pool.concat(GASES.map(g=>({gas:g})));
+  if(!pool.length)pool=CARD.filter(d=>!isInf(d));
+  const pick=rnd(pool);
+  if(pick.gas)return newRecallGas(pick.gas);
+  const d=pick,male=Math.random()<0.5,kg=male?ri(62,138):ri(50,118),age=ri(40,88);
   const showLb=S.wt==='lb'||(S.wt==='mix'&&Math.random()<0.5);
-  const lb=Math.round(kg*LB);
-  const wKg=showLb?lb/LB:kg; // the weight the user is supposed to work from
-  const stock=rnd(d.stocks);
   let mode=S.dm==='mix'?(Math.random()<0.6?'target':'range'):S.dm;
   if(isInf(d)||d.dose.disc||d.dose.min===d.dose.max)mode='target';
   const tgt=rnd(d.tg);
-  let ctx=d.cxBy?d.cxBy[tgt]:rnd(d.cx);
-  // expected dose in base (mcg or units); infusions in mcg/min
-  const per=x=>{
-    if(d.dose.t==='kg')return x*wKg*(isUnits(d)?1:(d.du==='mg'?1000:1));
-    if(d.dose.t==='fix')return x*(isUnits(d)?1:(d.du==='mg'?1000:1));
-    if(d.dose.per==='kg/hr')return x*wKg/60;
-    if(d.dose.per==='kg/min')return x*wKg;
-    return x;
-  };
-  Q={d,male,kg,lb,age,showLb,wKg,stock,mode,tgt,ctx,exp:mode==='target'?per(tgt):null,lo:per(d.dose.min),hi:per(d.dose.max),done:false};
-  renderQ();
-}
-function renderQ(){
-  const {d}=Q;
-  const wt=Q.showLb?`${Q.lb} lb`:`${Q.kg} kg`;
-  let task;
-  if(Q.mode==='target'){
-    task=isInf(d)?`Start the infusion at ${Q.tgt} ${doseUnitStr(d)}.`
-      : d.dose.t==='kg'?`Give ${Q.tgt} ${d.du}/kg.`:`Give ${Q.tgt} ${d.du}.`;
-  }else task=`Pick a dose from the drug card range.`;
+  RQ=makeQ(d,{stock:rnd(d.stocks),kg,lb:Math.round(kg*LB),showLb,mode,tgt});
+  RQ.age=age;RQ.male=male;RQ.ctx=d.cxBy?d.cxBy[tgt]:rnd(d.cx);rDone=false;
+  const task=mode==='target'?(isInf(d)?`Start the infusion at ${tgt} ${doseUnitStr(d)}.`:d.dose.t==='kg'?`Give ${tgt} ${d.du}/kg.`:`Give ${tgt} ${d.du}.`):'Pick a dose from the drug card range.';
   const sub=isInf(d)?'Make your bag or syringe, then set the pump rate.':(d.dose.t==='fix'?'Flat dose; weight doesn\'t change it.':'');
-  $('#patient').innerHTML=`
-    <div class="ptline"><span class="who">${Q.age}-year-old ${Q.male?'man':'woman'}</span><span class="wt">${wt}</span></div>
-    <p class="ctx">${Q.ctx}</p>
-    <div class="label"><div class="band${d.st?' striped':''}" style="background-color:${d.col}"></div>
-      <div class="txt"><div class="dname">${d.n}</div><div class="dsub">${d.tr} · vial ${fmtConc(Q.stock,d)}</div></div></div>
+  $('#r-patient').innerHTML=`
+    <div class="ptline"><span class="who">${age}-year-old ${male?'man':'woman'}</span><span class="wt">${showLb?RQ.lb+' lb':kg+' kg'}</span></div>
+    <p class="ctx">${RQ.ctx}</p>${labelHTML(d,RQ.stock)}
     <div class="task">${task}${sub?`<small>${sub}</small>`:''}</div>`;
-  // units
-  const du=isInf(d)?['mcg/min','mcg/hr']:isUnits(d)?['units']:['mg','mcg'];
-  const def=isInf(d)?(d.dose.per==='kg/hr'?'mcg/hr':'mcg/min'):d.du;
-  $('#a-dose-u').innerHTML=du.map(u=>`<option${u===def?' selected':''}>${u}</option>`).join('');
-  const cu=isUnits(d)?['units/mL']:['mg/mL','mcg/mL'];
-  const cdef=isUnits(d)?'units/mL':(d.du==='mg'?'mg/mL':'mcg/mL');
-  $('#a-conc-u').innerHTML=cu.map(u=>`<option${u===cdef?' selected':''}>${u}</option>`).join('');
-  $('#lg-prep').textContent=isInf(d)?'2 · How you make the infusion':'2 · How you draw it up';
-  $('#prep-hint').textContent=isInf(d)?'Drug = mL of vial added; Saline = mL of diluent in the bag or syringe.':'Not diluting? Put how much you draw from the vial under Drug, and leave Saline blank.';
-  $('#lg-give').textContent=isInf(d)?'3 · Pump rate':'3 · Volume to give';
-  $('#vol-u').textContent=isInf(d)?'mL/hr':'mL';
-  ['#a-dose','#a-drug','#a-ns','#a-conc','#a-vol'].forEach(s=>$(s).value='');
-  $('#fb').hidden=true;
-  $('#a-dose').focus({preventScroll:true});
+  $('#r-formwrap').innerHTML=formHTML('r',RQ,null,'<button class="b ghost" type="button" id="r-show">Show answer</button><button class="b ghost" type="button" id="r-next">Next patient</button>');
+  $('#r-fb').hidden=true;
+  $('#r-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const r=gradeDose(RQ,readForm('r'),null);
+    if(!rDone){SC.n++;if(r.ok){SC.ok++;SC.st++}else SC.st=0;rDone=true;save();renderScore()}
+    const fb=$('#r-fb');fb.hidden=false;fb.innerHTML=resultHTML(r)+workedHTML(RQ,null);
+    fb.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+  $('#r-show').onclick=()=>{if(!rDone){SC.n++;SC.st=0;rDone=true;save();renderScore()}const fb=$('#r-fb');fb.hidden=false;fb.innerHTML=`<div class="verdict no">Answer</div>`+workedHTML(RQ,null)};
+  $('#r-next').onclick=()=>{newRecall();const f=$('#r-formwrap input');if(f)f.focus({preventScroll:true})};
 }
 
-// ---- grading ----
-const near=(a,b,tol)=>Math.abs(a-b)<=Math.abs(b)*tol;
-function grade(){
-  const {d}=Q, out=[]; let allOk=true;
-  const v={dose:num($('#a-dose').value),drug:num($('#a-drug').value),ns:num($('#a-ns').value)??0,conc:num($('#a-conc').value),vol:num($('#a-vol').value)};
-  const uDose=v.dose!=null?v.dose*DU[$('#a-dose-u').value]:null;
-  // 1 dose
-  if(uDose==null){out.push(['no','Enter the dose.']);allOk=false}
-  else if(Q.mode==='target'){
-    if(near(uDose,Q.exp,0.05))out.push(['ok',`Dose ${fmtDose(uDose)} is right.`]);
-    else{allOk=false;out.push(['no',`Dose ${fmtDose(uDose)} is off. Expected about ${fmtDose(Q.exp)}${unitHint(uDose,Q.exp)}.`])}
-  }else{
-    if(uDose>=Q.lo*0.98&&uDose<=Q.hi*1.02)out.push(['ok',`Dose ${fmtDose(uDose)} is within the card range (${fmtDose(Q.lo)} to ${fmtDose(Q.hi)}).`]);
-    else{allOk=false;out.push(['no',`Dose ${fmtDose(uDose)} is outside the card range of ${cardDose(d)}, which is ${fmtDose(Q.lo)} to ${fmtDose(Q.hi)} for this patient${unitHint(uDose,(Q.lo+Q.hi)/2)}.`])}
-  }
-  // 2 prep
-  let actual=null;
-  if(v.drug==null||v.drug<=0){out.push(['no','Enter how many mL of drug you draw up.']);allOk=false}
-  else{
-    actual=Q.stock*v.drug/(v.drug+v.ns);
-    const uConc=v.conc!=null?v.conc*CU[$('#a-conc-u').value]:null;
-    if(uConc==null){out.push(['no',`Enter your final concentration. Your prep makes ${fmtConc(actual,d)}.`]);allOk=false}
-    else if(near(uConc,actual,0.025))out.push(['ok',`${sig(v.drug)} mL of ${fmtConc(Q.stock,d)}${v.ns?` + ${sig(v.ns)} mL saline`:''} = ${fmtConc(actual,d)}. Concentration is right.`]);
-    else{allOk=false;out.push(['no',`${sig(v.drug)} mL of ${fmtConc(Q.stock,d)}${v.ns?` + ${sig(v.ns)} mL saline`:''} actually makes ${fmtConc(actual,d)}, not ${fmtConc(uConc,d)}. Total drug ÷ total volume: ${fmtAmt(Q.stock*v.drug,d)} ÷ ${sig(v.drug+v.ns)} mL.`])}
-    if(!isInf(d)&&uDose!=null&&Q.stock*v.drug<uDose*0.99){allOk=false;out.push(['no',`Your syringe only holds ${fmtAmt(Q.stock*v.drug,d)} of drug, less than the ${fmtDose(uDose)} you plan to give. Draw up more.`])}
-    if(!isInf(d)&&v.drug+v.ns>60)out.push(['warn',`That's ${sig(v.drug+v.ns)} mL total, more than a 60 mL syringe. Fine if you mean a bag.`]);
-  }
-  // 3 volume / rate
-  if(v.vol==null){out.push(['no',isInf(d)?'Enter the pump rate.':'Enter the volume to give.']);allOk=false}
-  else if(actual!=null&&uDose!=null){
-    const want=isInf(d)?uDose*60/actual:uDose/actual;
-    const ok=near(v.vol,want,0.04)||Math.abs(v.vol-want)<=0.05;
-    const unit=isInf(d)?'mL/hr':'mL';
-    if(ok)out.push(['ok',isInf(d)?`${sig(v.vol)} mL/hr delivers your dose at ${fmtConc(actual,d)}.`:`${sig(v.vol)} mL at ${fmtConc(actual,d)} = ${fmtDose(v.vol*actual)}. Volume is right.`]);
-    else{allOk=false;out.push(['no',isInf(d)?`At ${fmtConc(actual,d)}, ${fmtDose(uDose)} needs ${sig(want)} mL/hr, not ${sig(v.vol)}. (mcg/min × 60 ÷ mcg/mL)`:`At ${fmtConc(actual,d)}, ${fmtDose(uDose)} is ${sig(want)} mL, not ${sig(v.vol)} mL.`])}
-    if(!isInf(d)&&ok&&v.vol<0.3)out.push(['warn',`${sig(v.vol)} mL is hard to measure accurately. Diluting would give you a volume you can push precisely.`]);
-  }
-  return {allOk,out};
-}
-function fmtDose(base){
-  const d=Q.d;
-  if(isInf(d))return sig(base)+' mcg/min'+(d.dose.per==='kg/hr'?` (${sig(base*60)} mcg/hr)`:'');
-  return fmtAmt(base,d);
-}
-function unitHint(got,want){const r=got/want;return (r>800&&r<1200)||(r>0.0008&&r<0.0012)?'. Check mg vs mcg':''}
-
-function worked(){
-  const {d}=Q, L=[];
-  const w=Q.showLb?`${Q.lb} lb ÷ 2.2 = ${sig(Q.wKg)} kg`:`${Q.kg} kg`;
-  const exp=Q.mode==='target'?Q.exp:(Q.lo+Q.hi)/2;
-  if(d.dose.t==='kg'){
-    if(Q.showLb)L.push(`Weight: ${w}.`);
-    L.push(Q.mode==='target'?`Dose: ${Q.tgt} ${d.du}/kg × ${sig(Q.wKg)} kg = ${fmtDose(exp)}.`:`Range: ${d.dose.min}–${d.dose.max} ${d.du}/kg × ${sig(Q.wKg)} kg = ${fmtDose(Q.lo)} to ${fmtDose(Q.hi)}. Using the middle, ${fmtDose(exp)}.`);
-  }else if(d.dose.t==='fix'){
-    L.push(Q.mode==='target'?`Dose: ${fmtDose(exp)} (flat dose).`:`Range: ${cardDose(d)}. Using ${fmtDose(exp)}.`);
-  }else{
-    if(d.dose.per!=='min'){if(Q.showLb)L.push(`Weight: ${w}.`);L.push(`Dose: ${Q.tgt} ${doseUnitStr(d)} × ${sig(Q.wKg)} kg = ${d.dose.per==='kg/hr'?sig(Q.tgt*Q.wKg)+' mcg/hr':sig(Q.tgt*Q.wKg)+' mcg/min'}.`)}
-    else L.push(`Dose: ${Q.tgt} mcg/min (not weight-based).`);
-  }
-  const dl=d.dil&&d.dil[Q.stock];
-  let conc=Q.stock;
-  if(dl){conc=Q.stock*dl[0]/(dl[0]+dl[1]);
-    L.push(`Prep: ${dl[0]} mL of ${fmtConc(Q.stock,d)} (${fmtAmt(Q.stock*dl[0],d)}) + ${dl[1]} mL saline = ${dl[0]+dl[1]} mL at ${fmtConc(conc,d)}.${d.id==='phenyl'?' (In practice: 1 mL into a 100 mL bag.)':''}${d.id==='epi'||d.id==='norepi'?' (In practice: added to a 250 mL bag.)':''}`);}
-  else L.push(`Prep: use it straight from the vial at ${fmtConc(Q.stock,d)}.${d.id==='diazepam'?' Diazepam isn\'t usually diluted.':''}`);
-  if(isInf(d))L.push(`Rate: ${sig(exp)} mcg/min × 60 = ${sig(exp*60)} mcg/hr ÷ ${fmtConc(conc,d)} = ${sig(exp*60/conc)} mL/hr.`);
-  else L.push(`Volume: ${fmtDose(exp)} ÷ ${fmtConc(conc,d)} = ${sig(exp/conc)} mL.`);
-  if(d.tip)L.push(d.tip);
-  if(dl)L.push('Other dilutions are fine too, as long as your numbers add up.');
-  return `<div class="work"><h3>Worked answer</h3><ol>${L.map(x=>`<li>${x}</li>`).join('')}</ol></div>`;
+function gasLabel(g){return `<div class="label"><div class="band" style="background-color:${g.col}"></div><div class="txt"><div class="dname">${g.n}</div><div class="dsub">${g.tr} · inhalation agent</div></div></div>`}
+function newRecallGas(g){
+  const male=Math.random()<0.5,age=ri(40,89),kg=male?ri(62,138):ri(50,118);rDone=false;
+  $('#r-patient').innerHTML=`
+    <div class="ptline"><span class="who">${age}-year-old ${male?'man':'woman'}</span><span class="wt">${kg} kg</span></div>
+    <p class="ctx">Maintenance after induction. You want 1 MAC.</p>${gasLabel(g)}
+    <div class="task">What % do you dial in?<small>Age-adjust from the drug card MAC.</small></div>`;
+  $('#r-formwrap').innerHTML=`<form id="r-form" autocomplete="off" novalidate><fieldset><legend>Age-adjusted 1 MAC</legend>
+    <div class="row"><div class="in"><input id="r-mac" inputmode="decimal" aria-label="MAC percent"><span class="u">%</span></div></div></fieldset>
+    <div class="btns"><button class="b primary" type="submit">Check answer</button><button class="b ghost" type="button" id="r-show">Show answer</button><button class="b ghost" type="button" id="r-next">Next patient</button></div></form>`;
+  $('#r-fb').hidden=true;
+  const work=`<div class="work"><h3>Worked answer</h3><ol><li>${macWork(g,age)}</li></ol></div>`;
+  $('#r-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const v=num($('#r-mac').value),ok=macOk(v,g.mac,age);
+    if(!rDone){SC.n++;if(ok){SC.ok++;SC.st++}else SC.st=0;rDone=true;save();renderScore()}
+    const fb=$('#r-fb');fb.hidden=false;
+    fb.innerHTML=resultHTML({ok,out:[[ok?'ok':'no',v==null?'Enter a percentage.':ok?`${v}% is right.`:`${v}% is off. Expected ${sig(adjMac(g.mac,age))}%.`]]})+work;
+  });
+  $('#r-show').onclick=()=>{if(!rDone){SC.n++;SC.st=0;rDone=true;save();renderScore()}const fb=$('#r-fb');fb.hidden=false;fb.innerHTML=`<div class="verdict no">Answer</div>`+work};
+  $('#r-next').onclick=()=>{newRecall();const f=$('#r-formwrap input');if(f)f.focus({preventScroll:true})};
 }
 
-$('#ans').addEventListener('submit',e=>{
-  e.preventDefault();
-  const {allOk,out}=grade();
-  if(!Q.done){SC.n++;if(allOk){SC.ok++;SC.st++}else SC.st=0;Q.done=true;save();renderScore()}
-  const fb=$('#fb');fb.hidden=false;
-  fb.innerHTML=`<div class="verdict ${allOk?'ok':'no'}">${allOk?'Correct':'Not quite'}</div>`+
-    out.map(([k,t])=>`<div class="step ${k}"><span class="mk">${k==='ok'?'✓':k==='no'?'✗':'!'}</span><span>${t}</span></div>`).join('')+worked();
-  fb.scrollIntoView({behavior:'smooth',block:'nearest'});
-});
-$('#b-show').onclick=()=>{
-  if(!Q.done){SC.n++;SC.st=0;Q.done=true;save();renderScore()}
-  const fb=$('#fb');fb.hidden=false;fb.innerHTML=`<div class="verdict no">Answer</div>`+worked();
+// ================= CASE MODE =================
+const PROCS=[{n:'laparoscopic cholecystectomy',lap:1},{n:'laparoscopic appendectomy',lap:1},{n:'laparoscopic inguinal hernia repair',lap:1},{n:'laparoscopic hysterectomy',lap:1,sex:'F'},
+  {n:'total knee arthroplasty'},{n:'total hip arthroplasty'},{n:'ankle ORIF'},{n:'lumbar laminectomy'},{n:'thyroidectomy'},{n:'mastectomy',sex:'F'},{n:'TURP',sex:'M'},{n:'open ventral hernia repair'}];
+const SYRSETS=[[1,3,5,10,20],[1,3,5,10,20],[20],[3,10],[5,20],[10],[3,5,10],[1,10,20],[3,20]];
+const BAGSETS=[[100],[250],[50,100],[100,250],[50],[250,1000],[100,500],[50,250]];
+const SEQ=[
+  {k:'midaz',t:'Premedicate with midazolam'},{k:'fent',t:'Fentanyl'},{k:'lido',t:'Lidocaine'},{k:'prop',t:'Propofol'},
+  {k:'lash',t:'Check eyelash reflex'},{k:'bvm',t:'Confirm you can bag-mask ventilate'},{k:'roc',t:'Rocuronium'},{k:'intub',t:'Intubate'}];
+const IND=[['midazolam','midaz','Premedication'],['fentanyl','fent','Opioid'],['lido','lido','Before propofol'],['propofol','prop','Induction'],['roc','roc','Paralytic']];
+function seqToken(s){
+  s=s.toLowerCase();
+  const has=(...w)=>w.some(x=>s.includes(x));
+  if(has('preox','pre-ox','pre ox','denitro','oxygenat'))return 'preox';
+  if(has('midaz','versed'))return 'midaz';
+  if(has('fent','sublimaze'))return 'fent';
+  if(has('lido','xylo'))return 'lido';
+  if(has('propo','diprivan'))return 'prop';
+  if(has('lash','eyelid'))return 'lash';
+  if(has('roc','zemuron','paraly'))return 'roc';
+  if(has('intub','ett','tube'))return 'intub';
+  if(has('mask','bvm','bag','ventilat'))return 'bvm';
+  if(has('monitor'))return 'mon';
+  return null;
+}
+function matchAction(s){
+  s=s.toLowerCase().trim();if(!s)return null;
+  const has=(...w)=>w.some(x=>s.includes(x));
+  if(has('absorb','soda lime','sodalime','baralyme','canister'))return 'absorbent';
+  if(has('sevo','volatile','vapor','gas','agent','anesthetic','dial')||/\b(mac|iso|des)\b/.test(s)){
+    if(has('dec','lower','reduc','down','↓','less','off','light'))return 'decGas';
+    if(has('inc','rais','up','↑','higher','more','deepen','deeper'))return 'incGas';
+  }
+  const vent=has('rr','resp','rate','tidal','tv','minute vent','ventilat','vent','breath');
+  if(vent&&has('inc','rais','up','↑','higher','more','faster','hypervent'))return 'incVent';
+  if(vent&&has('dec','lower','reduc','down','↓','less','slow','hypovent'))return 'decVent';
+  let best=null;
+  for(const d of D)for(const a of d.al)if(s.includes(a)&&(!best||a.length>best.l))best={id:d.id,l:a.length};
+  return best?best.id:null;
+}
+const ACT_NAME={absorbent:'Check the CO₂ absorbent',incVent:'Increase RR and/or tidal volume',decVent:'Decrease RR and/or tidal volume',decGas:'Turn the sevo down',incGas:'Turn the sevo up'};
+const actName=t=>ACT_NAME[t]||(byId[t]?byId[t].n:t);
+const BLURB={
+  esmolol:'Esmolol is a short-acting β1 blocker. It brings HR down, for tachycardia without a BP problem.',
+  metoprolol:'Metoprolol is a longer-acting β1 blocker, for after esmolol has worked and you need longer control.',
+  glyco:'Glycopyrrolate is an anticholinergic. It raises HR, for bradycardia without a BP problem.',
+  atropine:'Atropine raises HR, but your maintenance notes use glycopyrrolate for bradycardia without a BP problem.',
+  ephedrine:'Ephedrine raises both HR and BP, for hypotension with bradycardia.',
+  labetalol:'Labetalol blocks α1, β1 and β2. It lowers BP (and HR), for hypertension without a HR problem.',
+  hydral:'Hydralazine relaxes the vessel walls and lowers BP without slowing HR, for hypertension with bradycardia.',
+  phenyl:'Phenylephrine is pure α1. It raises BP and can cause reflex bradycardia, so it\'s for hypotension without a slow HR.',
+  absorbent:'Checking the absorbent is the first step for a rising EtCO₂.',
+  incVent:'Raising RR or tidal volume moves more air and blows off CO₂, which brings a high EtCO₂ down.',
+  decVent:'Lowering RR or tidal volume moves less air so CO₂ builds back up, which brings a low EtCO₂ up.',
+  decGas:'Too much volatile relaxes the vessels and depresses the heart, so BP drops.',
+  incGas:'A patient who is too light reacts to surgery with a high HR and BP.'};
+const pct=(x,a,b)=>Math.round(x*(a+Math.random()*(b-a)));
+const EV={
+  tachy:{ans:'esmolol',mk:b=>({...b,hr:ri(116,135),rhythm:'Sinus tachycardia'}),fix:'HR settles back down.'},
+  tachyFollow:{ans:'metoprolol',mk:b=>({...b,hr:ri(108,120),rhythm:'Sinus tachycardia'}),lead:'The esmolol worked, but HR keeps drifting back up. You want something that lasts longer.',fix:'HR comes down and stays down.'},
+  brady:{ans:'glyco',mk:b=>({...b,hr:ri(38,46),rhythm:'Sinus bradycardia'}),fix:'HR comes back up.'},
+  bradyHypo:{ans:'ephedrine',mk:b=>({...b,hr:ri(38,46),sbp:pct(b.sbp,.64,.72),dbp:pct(b.dbp,.6,.7),rhythm:'Sinus bradycardia'}),fix:'HR and BP both come back up.'},
+  htn:{ans:'labetalol',mk:b=>({...b,sbp:pct(b.sbp,1.3,1.42),dbp:pct(b.dbp,1.25,1.35)}),fix:'BP comes down.'},
+  htnBrady:{ans:'hydral',mk:b=>({...b,hr:ri(40,48),sbp:pct(b.sbp,1.3,1.42),dbp:pct(b.dbp,1.25,1.35),rhythm:'Sinus bradycardia'}),fix:'BP comes down and HR picks up a little.'},
+  hypo:{ans:'phenyl',mk:b=>({...b,sbp:pct(b.sbp,.64,.72),dbp:pct(b.dbp,.6,.7)}),fix:'BP comes back up.'},
+  hypoTachy:{ans:'phenyl',first:1,when:'A few minutes after induction, before incision',mk:b=>({...b,hr:ri(108,122),sbp:pct(b.sbp,.64,.72),dbp:pct(b.dbp,.6,.7),rhythm:'Sinus tachycardia'}),fix:'BP comes back up and HR slows as the reflex tachycardia settles.',note:'Your notes: tachycardia with hypotension right after induction is usually from the propofol.'},
+  hyper:{ans:'absorbent',then:'incVent',mk:b=>({...b,etco2:ri(50,58)}),mid:'You check the absorbent: no color change, so it isn\'t exhausted. EtCO₂ is still high. What next?',fix:'EtCO₂ comes back down.',vent:+4},
+  hypocarb:{ans:'decVent',mk:b=>({...b,etco2:ri(24,29)}),fix:'EtCO₂ comes back up.',vent:-2},
+  // only added when the sevo set before incision was wrong
+  gasHigh:{ans:'decGas',gas:1,mk:b=>({...b,hr:Math.max(56,b.hr-ri(2,8)),sbp:pct(b.sbp,.64,.72),dbp:pct(b.dbp,.6,.7)}),fix:'BP comes back up as the sevo level falls.'},
+  gasLow:{ans:'incGas',gas:1,mk:b=>({...b,hr:ri(112,128),sbp:pct(b.sbp,1.28,1.4),dbp:pct(b.dbp,1.2,1.3),rhythm:'Sinus tachycardia'}),fix:'HR and BP settle as the patient gets deeper.'},
 };
-$('#b-next').onclick=newQ;
+const WHENS=['At incision','During the dissection','After the table is repositioned','While the surgeon is working','Partway through the case','While the surgeon closes'];
+let CASE=null;
+function monitorHTML(v,base){
+  const dl=k=>{if(!base)return '';const r=(v[k]-base[k])/base[k];return Math.abs(r)<0.1?'':`<span class="dl" aria-label="${r>0?'up':'down'} from baseline">${r>0?'▲':'▼'}</span>`};
+  const map=Math.round((v.sbp+2*v.dbp)/3);
+  return `<div class="mon" role="group" aria-label="Monitor">
+    <div class="m hr"><span class="ml">HR · ECG</span><span class="mv">${v.hr}${dl('hr')}</span><span class="ms">${v.rhythm}</span></div>
+    <div class="m bp"><span class="ml">NIBP</span><span class="mv">${v.sbp}/${v.dbp}${dl('sbp')}</span><span class="ms">MAP ${map}</span></div>
+    <div class="m sp"><span class="ml">SpO₂</span><span class="mv">${v.spo2}</span><span class="ms">%</span></div>
+    <div class="m co"><span class="ml">EtCO₂</span><span class="mv">${v.etco2}${dl('etco2')}</span><span class="ms">mmHg · RR ${v.rr}</span></div></div>`;
+}
+function newCase(){
+  const male=Math.random()<0.5,sex=male?'M':'F';
+  const proc=rnd(PROCS.filter(p=>!p.sex||p.sex===sex));
+  const kg=male?ri(62,135):ri(50,115),age=ri(40,86);
+  const sup={syr:rnd(SYRSETS),bags:rnd(BAGSETS)};
+  const vials={};IND.forEach(([id])=>vials[id]=rnd(byId[id].stocks));
+  const base={hr:ri(62,84),sbp:ri(112,138),dbp:ri(64,82),spo2:ri(98,100),etco2:ri(34,40),rr:12,rhythm:'Normal sinus rhythm'};
+  // events
+  const n=S.ev;let keys=shuffle(Object.keys(EV).filter(k=>k!=='tachyFollow'&&!EV[k].gas)).slice(0,n);
+  keys.sort((a,b)=>(EV[b].first||0)-(EV[a].first||0));
+  const evs=[];keys.forEach(k=>{evs.push(k);if(k==='tachy'&&evs.length<n+1&&Math.random()<0.6)evs.push('tachyFollow')});
+  let t=ri(15,20);
+  const steps=[{type:'seq',phase:'ask'}];
+  IND.forEach(([id,tok,role],i)=>steps.push({type:'ind',id,role,idx:i,phase:'dose',q:makeQ(byId[id],{stock:vials[id],kg,mode:byId[id].dose.min===byId[id].dose.max?'target':'range',tgt:byId[id].dose.min})}));
+  steps.push({type:'intub',phase:'next'},{type:'setup',phase:'ask'},{type:'mac',phase:'ask'});
+  evs.forEach(k=>{const e=EV[k];const time=k==='hypoTachy'?ri(3,6):t;if(k!=='hypoTachy')t=time+ri(10,18);
+    steps.push({type:'event',k,time,when:e.when||(proc.lap&&Math.random()<0.4?'Right after insufflation':rnd(WHENS)),phase:'choose',tries:0,v:e.mk(base)})});
+  steps.push({type:'end',phase:'end'});
+  CASE={male,age,kg,proc,sup,vials,base,steps,i:0,log:[],score:{got:0,of:0},counted:false};
+  steps.forEach(s=>s.parts=[introHTML(s)]);
+  renderCase();renderScore();
+}
+function introHTML(s){
+  const c=CASE;
+  if(s.type==='seq')return `<span class="eyebrow">Before you start</span><h2>What's your induction sequence?</h2><p>Type each step on its own line, in order. Include the checks, not just the drugs.</p>`;
+  if(s.type==='ind'){const d=byId[s.id];return `<span class="eyebrow">Induction · step ${s.idx+1} of ${IND.length} drugs</span><h2>${d.n}</h2><p>${s.role}. What dose, how do you prepare it, and how much do you give?</p>${labelHTML(d,s.q.stock)}`}
+  if(s.type==='intub')return `<span class="eyebrow">Airway</span><h2>Intubated</h2><p>Eyelash reflex is gone. You mask ventilate easily, give the rocuronium, and intubate. EtCO₂ confirms the tube and breath sounds are equal. The patient is hooked up to the machine.</p><p><b>Baseline vitals after intubation.</b> Write these down. A 20–30% change from baseline is significant.</p>${monitorHTML(c.base)}`;
+  if(s.type==='setup')return `<span class="eyebrow">After intubation</span><h2>Okay, what's next?</h2><p>The patient is on the machine. What three things do you do before the case gets going?</p>`;
+  if(s.type==='mac')return `<span class="eyebrow">Before incision</span><h2>How much sevo?</h2><p>You're running 1 MAC of sevoflurane for this ${c.age}-year-old. What % do you dial in?</p>${gasLabel(GASES[0])}`;
+  if(s.type==='event'){const e=EV[s.k];return `<span class="eyebrow">${s.time} min after induction</span><h2>${s.when}</h2>${e.lead?`<p>${e.lead}</p>`:'<p>The monitor changes.</p>'}${monitorHTML(s.v,c.base)}<p class="hint">Baseline: HR ${c.base.hr} · BP ${c.base.sbp}/${c.base.dbp} · SpO₂ ${c.base.spo2} · EtCO₂ ${c.base.etco2}</p>`}
+  return '';
+}
+function briefHTML(){
+  const c=CASE;
+  return `<section class="panel card"><span class="eyebrow">Case</span>
+    <h2>${c.age}-year-old ${c.male?'man':'woman'}, ${c.kg} kg</h2>
+    <p>Scheduled for a ${c.proc.n} under general anesthesia with an endotracheal tube. Standard ASA monitors are on.</p>
+    <div class="cart">
+      <span class="k">Syringes</span><span class="v">${c.sup.syr.map(s=>s+' mL').join(' · ')}</span>
+      <span class="k">NS bags</span><span class="v">${c.sup.bags.map(b=>b+' mL').join(' · ')}</span>
+      <span class="k">Vials</span><span class="v">${IND.map(([id])=>`${byId[id].n} ${fmtConc(c.vials[id],byId[id])}`).join(' · ')}</span>
+    </div></section>`;
+}
+function controlsHTML(s){
+  if(s.phase==='next')return `<div class="btns"><button class="b primary" type="button" id="c-next">Continue</button></div>`;
+  if(s.type==='setup')return `<form id="c-setup" autocomplete="off"><label for="c-setuptxt" class="hint">Type your answer</label><div class="row"><div class="in" style="flex:1"><input id="c-setuptxt" class="wide" style="width:100%"></div><button class="b primary" type="submit">Submit</button></div></form>`;
+  if(s.type==='mac')return `<form id="c-mac" autocomplete="off"><div class="row"><label for="c-mactxt">Sevo</label><div class="in"><input id="c-mactxt" inputmode="decimal"><span class="u">%</span></div><button class="b primary" type="submit">Dial it in</button></div></form>`;
+  if(s.type==='seq')return `<form id="c-seq"><label for="c-seqtxt" class="hint">One step per line</label><textarea id="c-seqtxt" placeholder="First step&#10;Second step&#10;…"></textarea><div class="btns"><button class="b primary" type="submit">Check sequence</button></div></form>`;
+  if(s.phase==='dose')return formHTML('c',s.q,CASE.sup);
+  if(s.phase==='choose'||s.phase==='choose2')return `<form id="c-act" autocomplete="off"><label for="c-acttxt"><b>What do you do?</b></label><div class="row"><div class="in"><input id="c-acttxt" class="wide" list="actions" placeholder="Drug or ventilator change"></div><button class="b primary" type="submit">Submit</button></div><p class="hint">Name the drug, or the ventilator change. Dosing comes next.</p></form>`;
+  if(s.type==='end')return `<div class="btns"><button class="b primary" type="button" id="c-again">Start a new case</button></div>`;
+  return '';
+}
+function renderCase(){
+  const c=CASE,s=c.steps[c.i];
+  if(s.type==='end'&&!c.counted){c.counted=true;SC.cases++;save();
+    s.parts=[`<span class="eyebrow">Case complete</span><h2>${c.score.got} of ${c.score.of} correct</h2><p>The ${c.proc.n} is finished. Sequence, induction doses, and every event are logged above.</p>`+
+      (c.sevo!=null?`<div class="step ${c.sevoOk?'ok':'no'}"><span class="mk">${c.sevoOk?'✓':'✗'}</span><span>Sevo: you set ${esc(c.sevo)}%. ${macWork(GASES[0],c.age)}</span></div>`:'')];}
+  $('#c-feed').innerHTML=briefHTML()+c.log.join('')+`<section class="panel card active" id="c-active">${s.parts.join('')}${controlsHTML(s)}</section>`;
+  bindCase(s);renderScore();
+  const act=$('#c-active');if(c.i>0||s.parts.length>1)act.scrollIntoView({behavior:'smooth',block:'start'});
+  const f=act.querySelector('textarea,input');if(f&&c.i>0)f.focus({preventScroll:true});
+}
+function point(ok){CASE.score.of++;if(ok)CASE.score.got++}
+function advance(){const c=CASE,s=c.steps[c.i];c.log.push(`<section class="panel card">${s.parts.join('')}</section>`);c.i++;renderCase()}
+function bindCase(s){
+  const nx=$('#c-next');if(nx)nx.onclick=advance;
+  const ag=$('#c-again');if(ag)ag.onclick=newCase;
+  const sq=$('#c-seq');if(sq)sq.addEventListener('submit',e=>{e.preventDefault();gradeSeq(s,$('#c-seqtxt').value)});
+  const df=$('#c-form');if(df)df.addEventListener('submit',e=>{e.preventDefault();gradeCaseDose(s)});
+  const af=$('#c-act');if(af)af.addEventListener('submit',e=>{e.preventDefault();gradeAction(s,$('#c-acttxt').value)});
+  const su=$('#c-setup');if(su)su.addEventListener('submit',e=>{e.preventDefault();gradeSetup(s,$('#c-setuptxt').value)});
+  const mf=$('#c-mac');if(mf)mf.addEventListener('submit',e=>{e.preventDefault();gradeMac(s,$('#c-mactxt').value)});
+}
+function gradeSetup(s,txt){
+  const t=txt.toLowerCase();if(!t.trim())return;
+  const items=[
+    ['Ventilator on (switch from bag to vent mode)',/vent|mode|mechanical|\b(vc|pc)\b|volume control|pressure control/.test(t)],
+    ['Gas on (sevo)',/sevo|volatile|vapori|agent|\bmac\b|\biso|\bdes|\bgas\b(?!\s*flow)/.test(t)],
+    ['Flows down from 10 to 2 L/min',/flow|fgf|l\/min|lpm|liter|litre/.test(t)]];
+  const ok=items.every(x=>x[1]);point(ok);
+  s.parts.push(`<div class="echo">${esc(txt)}</div><div class="verdict ${ok?'ok':'no'}">${ok?'Correct':'Not quite'}</div>`+
+    items.map(([l,h])=>`<div class="step ${h?'ok':'no'}"><span class="mk">${h?'✓':'✗'}</span><span>${l}${h?'':' (missing)'}</span></div>`).join(''));
+  s.phase='next';renderCase();
+}
+function gradeMac(s,txt){
+  const v=num(txt);if(v==null)return;
+  const c=CASE,g=GASES[0],a=adjMac(g.mac,c.age),ok=macOk(v,g.mac,c.age);
+  c.sevo=v;c.sevoOk=ok;point(ok);
+  s.parts.push(`<div class="echo">${esc(v)}% sevo</div><p>Sevo is set to ${esc(v)}%. Flows are at 2 L/min. The surgeon is starting.</p>`);
+  if(!ok){
+    // the mistake comes back 10 minutes in
+    c.steps=c.steps.filter(x=>x.k!=='hypoTachy');
+    const k=v>a?'gasHigh':'gasLow';
+    c.steps.splice(c.i+1,0,{type:'event',k,time:10,when:'Ten minutes into the case',phase:'choose',tries:0,v:EV[k].mk(c.base),
+      parts:[],note:`You dialed ${v}% sevo. ${macWork(g,c.age)} ${v>a?'Too much volatile drops SVR and depresses the heart, so BP falls.':'Too little and the patient is light, so the sympathetic system responds to surgery.'}`});
+    const ns=c.steps[c.i+1];ns.parts=[introHTML(ns)];
+  }
+  s.phase='next';renderCase();
+}
+function gradeSeq(s,txt){
+  const lines=txt.split(/\n|;|→|->|,|\bthen\b/i).map(x=>x.replace(/^\s*(\d+[\).:-]?|[-•*])\s*/,'').trim()).filter(Boolean);
+  if(!lines.length)return;
+  const toks=lines.map(l=>({l,k:seqToken(l)}));
+  const got=toks.filter(t=>t.k&&t.k!=='preox'&&t.k!=='mon').map(t=>t.k);
+  const want=SEQ.map(x=>x.k);
+  const ok=got.length===want.length&&got.every((k,i)=>k===want[i]);
+  point(ok);
+  const unk=toks.filter(t=>!t.k).map(t=>t.l);
+  const yours=got.map((k,i)=>`<li class="${k===want[i]?'ok':'no'}">${SEQ.find(x=>x.k===k).t}</li>`).join('');
+  const missing=want.filter(k=>!got.includes(k)).map(k=>SEQ.find(x=>x.k===k).t);
+  s.parts.push(`<div class="echo">${esc(lines.join(' → '))}</div>`,
+    `<div class="verdict ${ok?'ok':'no'}">${ok?'Correct':'Not quite'}</div>`,
+    `<div class="seqcmp"><div><span class="eyebrow">Yours, as I read it</span><ol>${yours||'<li class="no">Nothing recognized</li>'}</ol></div><div><span class="eyebrow">The sequence</span><ol>${SEQ.map(x=>`<li>${x.t}</li>`).join('')}</ol></div></div>`
+    +(missing.length?`<div class="step no"><span class="mk">✗</span><span>Missing: ${missing.join(', ')}.</span></div>`:'')
+    +(unk.length?`<div class="step warn"><span class="mk">!</span><span>Didn't recognize: ${esc(unk.join('; '))}.</span></div>`:'')
+    +(toks.some(t=>t.k==='preox')?`<div class="step ok"><span class="mk">✓</span><span>Preoxygenation counts as setup, so it's fine to include.</span></div>`:''));
+  s.phase='next';renderCase();
+}
+function gradeCaseDose(s){
+  const v=readForm('c'),r=gradeDose(s.q,v,CASE.sup);
+  point(r.ok);
+  s.parts.push(echoHTML(s.q,v),resultHTML(r),workedHTML(s.q,CASE.sup));
+  if(s.type==='event'){const e=EV[s.k];s.parts.push(`<p><b>${e.fix}</b></p>`+monitorHTML(resolved(s),CASE.base))}
+  s.phase='next';renderCase();
+}
+function resolved(s){const b=CASE.base,e=EV[s.k];return {...b,hr:b.hr+ri(-4,4),sbp:b.sbp+ri(-6,6),dbp:b.dbp+ri(-4,4),etco2:b.etco2+ri(-2,2),rr:b.rr+(e.vent||0)}}
+function gradeAction(s,txt){
+  const e=EV[s.k],want=s.phase==='choose2'?e.then:e.ans;
+  const tok=matchAction(txt);
+  if(!tok){s.parts.push(`<div class="echo">${esc(txt||'(blank)')}</div><div class="step warn"><span class="mk">!</span><span>I didn't recognize that. Type a drug name, or a ventilator change like "increase RR".</span></div>`);renderCase();return}
+  s.parts.push(`<div class="echo">${esc(txt)}</div>`);
+  if(tok===want){
+    if(!s.tries)point(true);
+    s.parts.push(`<div class="step ok"><span class="mk">✓</span><span>Yes, ${actName(tok).toLowerCase()}. ${BLURB[tok]||''}</span></div>`);
+    if((s.note||e.note)&&s.phase==='choose')s.parts.push(`<p class="hint">${s.note||e.note}</p>`);
+    advanceEvent(s,tok);
+  }else{
+    s.tries++;
+    let why=BLURB[tok]||`${actName(tok)} isn't one of your maintenance answers for this.`;
+    if(s.k==='hyper'&&s.phase==='choose'&&tok==='incVent')why='Right direction, but your notes say to check the absorbent first.';
+    if(e.gas&&byId[tok])why='A drug would treat the numbers, not the cause. What did you set before the case started?';
+    if(s.tries>=2){
+      point(false);
+      s.parts.push(`<div class="step no"><span class="mk">✗</span><span>${why}</span></div><div class="step warn"><span class="mk">!</span><span>The answer is <b>${actName(want)}</b>. ${BLURB[want]||''}</span></div>`+(s.note?`<p class="hint">${s.note}</p>`:''));
+      advanceEvent(s,want);
+    }else{
+      s.parts.push(`<div class="step no"><span class="mk">✗</span><span>${why} Look again at HR, BP and EtCO₂ against baseline. Try again.</span></div>`);
+      renderCase();
+    }
+  }
+}
+function advanceEvent(s,tok){
+  const e=EV[s.k];
+  if(s.phase==='choose'&&e.then){s.parts.push(`<p>${e.mid}</p>`);s.phase='choose2';s.tries=0;renderCase();return}
+  if(byId[tok]){const d=byId[tok];
+    s.q=makeQ(d,{stock:rnd(d.stocks),kg:CASE.kg,mode:'range'});
+    s.parts.push(`<p><b>How much ${d.n.toLowerCase()}, and how do you prepare it?</b></p>${labelHTML(d,s.q.stock)}`);
+    s.phase='dose';renderCase();return}
+  s.parts.push(`<p><b>${e.fix}</b></p>`+monitorHTML(resolved(s),CASE.base));
+  s.phase='next';renderCase();
+}
+function renderEvCount(){chips($('#evcount'),[[2,'2'],[3,'3'],[4,'4']],v=>S.ev===v,v=>S.ev=v,renderEvCount)}
+$('#c-new').onclick=newCase;
 
-// reference table
-$('#reftbl tbody').innerHTML=D.map(d=>`<tr><td><span class="sw" style="background:${d.col}${d.st?';background-image:repeating-linear-gradient(135deg,#fff 0 2px,transparent 2px 5px)':''}"></span>${d.n}</td><td>${d.tr}</td><td>${d.cls}</td><td class="n">${d.card}</td><td class="n">${cardDose(d)}</td></tr>`).join('');
-
-renderSettings();renderScore();newQ();
+// ================= INIT =================
+$('#actions').innerHTML=[...Object.values(ACT_NAME),...D.map(d=>d.n)].map(x=>`<option value="${x}">`).join('');
+$('#reftbl tbody').innerHTML=GASES.map(g=>`<tr><td><span class="sw" style="background-color:${g.col}"></span>${g.n}</td><td>${g.tr}</td><td>Inhalation agent</td><td class="n">MAC ${g.mac}%</td><td class="n">at age 40</td></tr>`).join('')+CARD.map(d=>`<tr><td><span class="sw" style="background-color:${d.col}${d.st?';background-image:repeating-linear-gradient(135deg,#fff 0 2px,transparent 2px 5px)':''}"></span>${d.n}</td><td>${d.tr}</td><td>${d.cls}</td><td class="n">${d.card}</td><td class="n">${cardDose(d)}</td></tr>`).join('');
+renderSettings();renderEvCount();newRecall();
+const h0=location.hash.slice(1);
+setMode(h0==='case'||h0==='recall'?h0:(S.mode==='case'?'case':'recall'),true);
 </script>
 
 </body>
