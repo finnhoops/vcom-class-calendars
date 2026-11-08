@@ -280,7 +280,8 @@ function formHTML(p,q,sup,extra=''){
   const cdef=isUnits(d)?'units/mL':(d.du==='mg'?'mg/mL':'mcg/mL');
   const cont=sup?`<div class="row"><label for="${p}-cont">Into a</label><div class="in"><select id="${p}-cont"><option value="">Choose…</option>${sup.syr.map(s=>`<option value="s${s}">${s} mL syringe</option>`).join('')}${sup.bags.map(b=>`<option value="b${b}">${b} mL NS bag</option>`).join('')}</select></div></div>`:'';
   return `<form id="${p}-form" autocomplete="off" novalidate>
-    <fieldset><legend>${d.dose.t==='fix'&&q.mode==='range'?'Your dose (pick from the card range)':'Dose for this patient'}</legend><div class="row"><div class="in"><input id="${p}-dose" inputmode="decimal" aria-label="Dose"><select id="${p}-dose-u" aria-label="Dose unit">${opts(du,def)}</select></div></div></fieldset>
+    ${q.mode==='range'&&d.dose.t==='kg'?`<fieldset><legend>Your dose per kg (from the card)</legend><div class="row"><div class="in"><input id="${p}-pk" inputmode="decimal" aria-label="Dose per kg"><span class="u">${d.du}/kg</span></div></div></fieldset>`:''}
+    <fieldset><legend>${d.dose.t==='fix'&&q.mode==='range'?'Your dose (pick from the card range)':q.mode==='range'&&d.dose.t==='kg'?'Total dose for this patient':'Dose for this patient'}</legend><div class="row"><div class="in"><input id="${p}-dose" inputmode="decimal" aria-label="Dose"><select id="${p}-dose-u" aria-label="Dose unit">${opts(du,def)}</select></div></div></fieldset>
     <fieldset><legend>${inf?'How you make the infusion':'How you draw it up'}</legend>
       <div class="row"><label for="${p}-drug">Drug</label><div class="in"><input id="${p}-drug" inputmode="decimal"><span class="u">mL</span></div>
         <span class="plus">+</span><label for="${p}-ns">Saline</label><div class="in"><input id="${p}-ns" inputmode="decimal" placeholder="0"><span class="u">mL</span></div></div>
@@ -295,7 +296,7 @@ function formHTML(p,q,sup,extra=''){
 function readForm(p){
   const g=id=>document.getElementById(p+'-'+id);
   return {dose:num(g('dose').value),doseU:g('dose-u').value,drug:num(g('drug').value),ns:num(g('ns').value)??0,
-    conc:num(g('conc').value),concU:g('conc-u').value,vol:num(g('vol').value),cont:g('cont')?g('cont').value:null};
+    conc:num(g('conc').value),concU:g('conc-u').value,vol:num(g('vol').value),pk:g('pk')?num(g('pk').value):null,cont:g('cont')?g('cont').value:null};
 }
 function echoHTML(q,v){
   const inf=isInf(q.d);
@@ -310,13 +311,22 @@ function gradeDose(q,v,sup){
   const d=q.d,inf=isInf(d),out=[];let ok=true;
   const no=t=>{ok=false;out.push(['no',t])};
   const uDose=v.dose!=null?v.dose*DU[v.doseU]:null;
+  // 0. dose per kg (recall)
+  const perKg=q.mode==='range'&&d.dose.t==='kg';
+  if(perKg){
+    if(v.pk==null)no(`Enter your dose per kg (${d.du}/kg).`);
+    else if(v.pk>=d.dose.min*0.98&&v.pk<=d.dose.max*1.02)out.push(['ok',`${v.pk} ${d.du}/kg is ${d.dose.min===d.dose.max?'the card dose':`in the card range (${cardDose(d)})`}.`]);
+    else no(`${v.pk} ${d.du}/kg isn't right. The card says ${cardDose(d)}.`);
+  }
   // 1. dose
   if(uDose==null)no('Enter the dose.');
   else if(q.mode==='target'){
     if(near(uDose,q.exp,0.05))out.push(['ok',`Dose ${fmtDose(q,uDose)} is right.`]);
     else no(`Dose ${fmtDose(q,uDose)} is off. Expected about ${fmtDose(q,q.exp)}${unitHint(uDose,q.exp)}.`);
   }else{
-    if(uDose>=q.lo*0.98&&uDose<=q.hi*1.02)out.push(['ok',`Dose ${fmtDose(q,uDose)} is within the card range (${fmtDose(q,q.lo)} to ${fmtDose(q,q.hi)} for this patient).`]);
+    const wantPk=perKg&&v.pk!=null?v.pk*q.wKg*(d.du==='mg'?1000:1):null;
+    if(wantPk!=null&&!near(uDose,wantPk,0.05))no(`${v.pk} ${d.du}/kg × ${sig(q.wKg)} kg = ${fmtDose(q,wantPk)}, not ${fmtDose(q,uDose)}${unitHint(uDose,wantPk)}.`);
+    else if(uDose>=q.lo*0.98&&uDose<=q.hi*1.02)out.push(['ok',`Dose ${fmtDose(q,uDose)} is within the card range (${fmtDose(q,q.lo)} to ${fmtDose(q,q.hi)} for this patient).`]);
     else no(`Dose ${fmtDose(q,uDose)} is outside the card range of ${cardDose(d)}, which is ${fmtDose(q,q.lo)} to ${fmtDose(q,q.hi)} for this patient${unitHint(uDose,(q.lo+q.hi)/2)}.`);
   }
   // 2. prep
@@ -381,7 +391,7 @@ function workedHTML(q,sup){
   const wline=q.showLb?`Weight: ${q.lb} lb ÷ 2.2 = ${sig(q.wKg)} kg.`:null;
   if(d.dose.t==='kg'){
     if(wline)L.push(wline);
-    L.push(q.mode==='target'?`Dose: ${q.tgt} ${d.du}/kg × ${sig(q.wKg)} kg = ${fmtDose(q,exp)}.`
+    L.push((q.mode==='target'||d.dose.min===d.dose.max)?`Dose: ${q.tgt??d.dose.min} ${d.du}/kg × ${sig(q.wKg)} kg = ${fmtDose(q,exp)}.`
       :`Range: ${d.dose.min}–${d.dose.max} ${d.du}/kg × ${sig(q.wKg)} kg = ${fmtDose(q,q.lo)} to ${fmtDose(q,q.hi)}. Using the middle, ${fmtDose(q,exp)}.`);
   }else if(d.dose.t==='fix'){
     L.push(q.mode==='target'?`Dose: ${fmtDose(q,exp)} (flat dose).`:`Range: ${cardDose(d)} (flat dose). Using ${fmtDose(q,exp)}.`);
@@ -409,6 +419,7 @@ const SC={ok:0,n:0,st:0,cases:0};
 try{Object.assign(S,JSON.parse(localStorage.getItem('dd-set')||'{}'))}catch(e){}
 try{Object.assign(SC,JSON.parse(localStorage.getItem('dd-sc')||'{}'))}catch(e){}
 S.cats=S.cats.filter(c=>CATS.includes(c));if(!S.cats.length)S.cats=CATS.slice();
+if(S.dm!=='target')S.dm='range';
 if(!S.gasSeen){if(!S.cats.includes('Gases'))S.cats.push('Gases');S.gasSeen=1}
 function save(){try{localStorage.setItem('dd-set',JSON.stringify(S));localStorage.setItem('dd-sc',JSON.stringify(SC))}catch(e){}}
 function renderScore(){
@@ -440,7 +451,7 @@ function renderSettings(){
   const r=renderSettings;
   chips($('#cats'),CATS.map(c=>[c,c]),c=>S.cats.includes(c),c=>{if(S.cats.includes(c)){if(S.cats.length>1)S.cats=S.cats.filter(x=>x!==c)}else S.cats.push(c)},r);
   chips($('#wtmode'),[['kg','kg'],['lb','lb'],['mix','Mix of both']],v=>S.wt===v,v=>S.wt=v,r);
-  chips($('#dosemode'),[['target','I tell you the dose'],['range','You pick from the card range'],['mix','Mix']],v=>S.dm===v,v=>S.dm=v,r);
+  chips($('#dosemode'),[['range','You recall the dose'],['target','I tell you the dose']],v=>S.dm===v,v=>S.dm=v,r);
   chips($('#infmode'),[['on','Include infusions'],['off','Boluses only']],v=>S.inf===v,v=>S.inf=v,r);
 }
 let RQ=null,rDone=false;
@@ -452,14 +463,13 @@ function newRecall(){
   if(pick.gas)return newRecallGas(pick.gas);
   const d=pick,male=Math.random()<0.5,kg=male?ri(62,138):ri(50,118),age=ri(40,88);
   const showLb=S.wt==='lb'||(S.wt==='mix'&&Math.random()<0.5);
-  let mode=S.dm==='mix'?(Math.random()<0.6?'target':'range'):S.dm;
-  if(isInf(d)||d.dose.disc||d.dose.min===d.dose.max)mode='target';
-  else if(d.dose.t==='fix')mode='range'; // flat doses: you recall and choose the dose
+  let mode=S.dm==='target'?'target':'range'; // default: you recall the dose from the card
+  if(isInf(d)||d.dose.disc)mode='target';
   const tgt=rnd(d.tg);
   RQ=makeQ(d,{stock:rnd(d.stocks),kg,lb:Math.round(kg*LB),showLb,mode,tgt});
   RQ.age=age;RQ.male=male;RQ.ctx=d.cxBy?d.cxBy[tgt]:rnd(d.cx);rDone=false;
-  const task=mode==='target'?(isInf(d)?`Start the infusion at ${tgt} ${doseUnitStr(d)}.`:d.dose.t==='kg'?`Give ${tgt} ${d.du}/kg.`:`Give ${tgt} ${d.du}.`):(d.dose.t==='fix'?'What dose will you give?':'Pick a dose from the drug card range.');
-  const sub=isInf(d)?'Make your bag or syringe, then set the pump rate.':(d.dose.t==='fix'?'Flat dose, so weight doesn\'t change it. Choose any dose in the card range.':'');
+  const task=mode==='target'?(isInf(d)?`Start the infusion at ${tgt} ${doseUnitStr(d)}.`:d.dose.t==='kg'?`Give ${tgt} ${d.du}/kg.`:`Give ${tgt} ${d.du}.`):(d.dose.t==='fix'?'What dose will you give?':'What dose will you give?');
+  const sub=isInf(d)?'Make your bag or syringe, then set the pump rate.':(d.dose.t==='fix'?'Flat dose, so weight doesn\'t change it. Choose any dose in the card range.':(mode==='range'?'Weight-based: enter your dose per kg from the card, then the total for this patient.':''));
   $('#r-patient').innerHTML=`
     <div class="ptline"><span class="who">${age}-year-old ${male?'man':'woman'}</span><span class="wt">${showLb?RQ.lb+' lb':kg+' kg'}</span></div>
     <p class="ctx">${RQ.ctx}</p>${labelHTML(d,RQ.stock)}
@@ -595,7 +605,7 @@ function newCase(){
   const evs=[];keys.forEach(k=>{evs.push(k);if(k==='tachy'&&evs.length<n+1&&Math.random()<0.6)evs.push('tachyFollow')});
   let t=ri(15,20);
   const steps=[{type:'seq',phase:'ask'}];
-  IND.forEach(([id,tok,role],i)=>steps.push({type:'ind',id,role,idx:i,phase:'dose',q:makeQ(byId[id],{stock:vials[id],kg,mode:byId[id].dose.min===byId[id].dose.max?'target':'range',tgt:byId[id].dose.min})}));
+  IND.forEach(([id,tok,role],i)=>steps.push({type:'ind',id,role,idx:i,phase:'dose',q:makeQ(byId[id],{stock:vials[id],kg,mode:'range',tgt:byId[id].dose.min})}));
   steps.push({type:'intub',phase:'next'},{type:'setup',phase:'ask'},{type:'mac',phase:'ask'});
   evs.forEach(k=>{const e=EV[k];const time=k==='hypoTachy'?ri(3,6):t;if(k!=='hypoTachy')t=time+ri(10,18);
     steps.push({type:'event',k,time,when:e.when||(proc.lap&&Math.random()<0.4?'Right after insufflation':rnd(WHENS)),phase:'choose',tries:0,v:e.mk(base)})});
