@@ -280,7 +280,7 @@ function formHTML(p,q,sup,extra=''){
   const cdef=isUnits(d)?'units/mL':(d.du==='mg'?'mg/mL':'mcg/mL');
   const cont=sup?`<div class="row"><label for="${p}-cont">Into a</label><div class="in"><select id="${p}-cont"><option value="">Choose…</option>${sup.syr.map(s=>`<option value="s${s}">${s} mL syringe</option>`).join('')}${sup.bags.map(b=>`<option value="b${b}">${b} mL NS bag</option>`).join('')}</select></div></div>`:'';
   return `<form id="${p}-form" autocomplete="off" novalidate>
-    <fieldset><legend>Dose for this patient</legend><div class="row"><div class="in"><input id="${p}-dose" inputmode="decimal" aria-label="Dose"><select id="${p}-dose-u" aria-label="Dose unit">${opts(du,def)}</select></div></div></fieldset>
+    <fieldset><legend>${d.dose.t==='fix'&&q.mode==='range'?'Your dose (pick from the card range)':'Dose for this patient'}</legend><div class="row"><div class="in"><input id="${p}-dose" inputmode="decimal" aria-label="Dose"><select id="${p}-dose-u" aria-label="Dose unit">${opts(du,def)}</select></div></div></fieldset>
     <fieldset><legend>${inf?'How you make the infusion':'How you draw it up'}</legend>
       <div class="row"><label for="${p}-drug">Drug</label><div class="in"><input id="${p}-drug" inputmode="decimal"><span class="u">mL</span></div>
         <span class="plus">+</span><label for="${p}-ns">Saline</label><div class="in"><input id="${p}-ns" inputmode="decimal" placeholder="0"><span class="u">mL</span></div></div>
@@ -454,11 +454,12 @@ function newRecall(){
   const showLb=S.wt==='lb'||(S.wt==='mix'&&Math.random()<0.5);
   let mode=S.dm==='mix'?(Math.random()<0.6?'target':'range'):S.dm;
   if(isInf(d)||d.dose.disc||d.dose.min===d.dose.max)mode='target';
+  else if(d.dose.t==='fix')mode='range'; // flat doses: you recall and choose the dose
   const tgt=rnd(d.tg);
   RQ=makeQ(d,{stock:rnd(d.stocks),kg,lb:Math.round(kg*LB),showLb,mode,tgt});
   RQ.age=age;RQ.male=male;RQ.ctx=d.cxBy?d.cxBy[tgt]:rnd(d.cx);rDone=false;
-  const task=mode==='target'?(isInf(d)?`Start the infusion at ${tgt} ${doseUnitStr(d)}.`:d.dose.t==='kg'?`Give ${tgt} ${d.du}/kg.`:`Give ${tgt} ${d.du}.`):'Pick a dose from the drug card range.';
-  const sub=isInf(d)?'Make your bag or syringe, then set the pump rate.':(d.dose.t==='fix'?'Flat dose; weight doesn\'t change it.':'');
+  const task=mode==='target'?(isInf(d)?`Start the infusion at ${tgt} ${doseUnitStr(d)}.`:d.dose.t==='kg'?`Give ${tgt} ${d.du}/kg.`:`Give ${tgt} ${d.du}.`):(d.dose.t==='fix'?'What dose will you give?':'Pick a dose from the drug card range.');
+  const sub=isInf(d)?'Make your bag or syringe, then set the pump rate.':(d.dose.t==='fix'?'Flat dose, so weight doesn\'t change it. Choose any dose in the card range.':'');
   $('#r-patient').innerHTML=`
     <div class="ptline"><span class="who">${age}-year-old ${male?'man':'woman'}</span><span class="wt">${showLb?RQ.lb+' lb':kg+' kg'}</span></div>
     <p class="ctx">${RQ.ctx}</p>${labelHTML(d,RQ.stock)}
