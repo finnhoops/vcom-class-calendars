@@ -81,7 +81,7 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid
   <header>
     <div>
       <h1>EKG Strip Drills</h1>
-      <p class="sub">Lead II rhythm strips. Name the rhythm.</p>
+      <p class="sub">Rhythm strips and 12-leads. Name the rhythm.</p>
     </div>
     <div class="score" id="score" aria-live="polite"></div>
   </header>
@@ -89,12 +89,12 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid
   <details class="panel" id="topics">
     <summary>Topics to practice</summary>
     <div class="chips" id="cats"></div>
+    <h3 style="margin-top:16px">Strip type</h3><div class="chips" id="fmt"></div>
   </details>
 
   <section class="panel stripcard">
-    <div class="striphead"><span id="s-label">Lead II · 25 mm/s · 10 mm/mV · 6-second strip</span><span id="s-mode"></span></div>
+    <div class="striphead" id="s-mode" hidden></div>
     <div class="paperwrap"><canvas id="strip" height="200" role="img" aria-label="EKG rhythm strip"></canvas></div>
-    <p class="note">Small box = 0.04 s · big box = 0.20 s · tick marks along the top are 1 second apart.</p>
   </section>
 
   <section class="panel">
@@ -206,42 +206,51 @@ const R=[
 const byId=Object.fromEntries(R.map(r=>[r.id,r]));
 
 // ================= SIGNAL =================
-const T=6, FS=250, N=T*FS;
-const rand=(a,b)=>a+Math.random()*(b-a);
-const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
-const pick=a=>a[Math.floor(Math.random()*a.length)];
+const FS=250;let T=6,N=T*FS,L=null,RNG=Math.random;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+// Normal lead morphology (mV): p,q,r,s,t; w = PVC/VT polarity scale; a = atrial (flutter/fib) wave scale; vf = VF/torsades scale
+const LEADS={
+ I:{p:.1,q:-.05,r:.7,s:-.1,t:.22,w:.6,a:.3,vf:.6},   II:{p:.15,q:-.08,r:1.1,s:-.24,t:.3,w:1,a:1,vf:1},
+ III:{p:.06,q:-.05,r:.5,s:-.22,t:.1,w:.5,a:1,vf:.8}, aVR:{p:-.12,q:0,r:.12,s:-.75,t:-.25,w:-.8,a:-.6,vf:.7},
+ aVL:{p:.03,q:-.03,r:.35,s:-.25,t:.08,w:.15,a:-.3,vf:.5}, aVF:{p:.1,q:-.06,r:.8,s:-.22,t:.2,w:.8,a:1,vf:.9},
+ V1:{p:.06,q:0,r:.2,s:-1,t:-.05,w:-.9,a:1,vf:1},    V2:{p:.08,q:0,r:.4,s:-1.3,t:.4,w:-1,a:.6,vf:1.1},
+ V3:{p:.08,q:0,r:.8,s:-.8,t:.45,w:-.4,a:.4,vf:1},   V4:{p:.08,q:-.03,r:1.3,s:-.5,t:.45,w:.6,a:.3,vf:.9},
+ V5:{p:.08,q:-.06,r:1.3,s:-.2,t:.35,w:1,a:.25,vf:.8},V6:{p:.08,q:-.06,r:1.0,s:-.1,t:.3,w:.9,a:.2,vf:.7}};
+const rand=(a,b)=>a+RNG()*(b-a);
+const ri=(a,b)=>a+Math.floor(RNG()*(b-a+1));
+const pick=a=>a[Math.floor(RNG()*a.length)];
 function G(S,mu,s,a){const i0=Math.max(0,Math.floor((mu-4*s)*FS)),i1=Math.min(N-1,Math.ceil((mu+4*s)*FS));for(let i=i0;i<=i1;i++){const x=(i/FS-mu)/s;S[i]+=a*Math.exp(-0.5*x*x)}}
 function AG(S,mu,a,s1,s2){const i0=Math.max(0,Math.floor((mu-4*s1)*FS)),i1=Math.min(N-1,Math.ceil((mu+4*s2)*FS));for(let i=i0;i<=i1;i++){const d=i/FS-mu,s=d<0?s1:s2,x=d/s;S[i]+=a*Math.exp(-0.5*x*x)}}
 const qtFor=rr=>Math.min(0.46,Math.max(0.30,0.40*Math.sqrt(rr)));
-function P(S,t,kind,amp){ // t = P centre
-  if(kind==='norm')G(S,t,0.022,amp??0.15);
-  else if(kind==='abn'){G(S,t-0.012,0.016,amp??0.2);G(S,t+0.03,0.014,-0.05)}
-  else if(kind==='inv')G(S,t,0.02,-(amp??0.12));
-  else if(kind==='tall')G(S,t,0.018,0.26);
-  else if(kind==='notch'){G(S,t-0.02,0.016,0.12);G(S,t+0.02,0.016,0.12)}
+function P(S,t,kind,amp){const k=L.p/0.15;
+  if(kind==='norm')G(S,t,0.022,(amp??0.15)*k);
+  else if(kind==='abn'){G(S,t-0.012,0.016,(amp??0.2)*k);G(S,t+0.03,0.014,-0.05*k)}
+  else if(kind==='inv')G(S,t,0.02,-(amp??0.12)*k);
+  else if(kind==='tall')G(S,t,0.018,0.26*k);
+  else if(kind==='notch'){G(S,t-0.02,0.016,0.12*k);G(S,t+0.02,0.016,0.12*k)}
 }
 // q0 = QRS onset. o: p (kind|null), pr, rr, delta, rAmp, rw, tAmp, qt, peak, u, j, dig, wide (shape), ret (retrograde P)
 function beat(S,q0,o){
-  const pr=o.pr??0.16;
+  const pr=o.pr??0.16,kt=L.t/0.3,kr=L.r/1.1;
   if(o.p)P(S,q0-pr+0.05,o.p,o.pAmp);
   if(o.ret)P(S,q0+0.13,'inv',0.1);
-  if(o.wide){const w=o.wide,p=w.pol;
+  if(o.wide){const w=o.wide,p=w.pol*L.w;
     G(S,q0+w.w*0.36,w.w*0.22,p*(w.amp??1.25));G(S,q0+w.w*0.82,w.w*0.14,-p*(w.s??0.35));
     AG(S,q0+w.w+0.17,-p*(w.t??0.45),0.07,0.05);return}
   const d=o.delta?0.035:0;
-  if(o.delta)AG(S,q0+0.062,0.42,0.03,0.012);
-  G(S,q0+0.012+d,0.007,-0.08);G(S,q0+0.036+d,o.rw??0.0095,o.rAmp??1.1);G(S,q0+0.06+d,0.009,-0.24);
+  if(o.delta)AG(S,q0+0.062,0.42*kr,0.03,0.012);
+  G(S,q0+0.012+d,0.007,L.q);G(S,q0+0.036+d,o.rw??0.0095,(o.rAmp??1.1)*kr);G(S,q0+0.06+d,0.009,L.s);
   const qt=o.qt??qtFor(o.rr??0.8);
-  if(o.j)G(S,q0+0.088,0.013,0.32);
-  if(o.dig){AG(S,q0+0.2,-0.3,0.075,0.04);G(S,q0+qt-0.02,0.022,0.08)}
-  else if(o.peak)AG(S,q0+qt-0.1,0.95,0.03,0.025);
-  else AG(S,q0+qt-0.07,o.tAmp??0.3,0.055,0.036);
-  if(o.u)G(S,q0+qt+0.1,0.035,0.19);
-  if(o.std)G(S,q0+0.17,0.05,o.std);
+  if(o.j)G(S,q0+0.088,0.013,0.32*Math.max(0.3,kr));
+  if(o.dig){AG(S,q0+0.2,-0.3*kt,0.075,0.04);G(S,q0+qt-0.02,0.022,0.08*kt)}
+  else if(o.peak)AG(S,q0+qt-0.1,0.95*kt,0.03,0.025);
+  else AG(S,q0+qt-0.07,(o.tAmp??0.3)*kt,0.055,0.036);
+  if(o.u)G(S,q0+qt+0.1,0.035,0.19*Math.abs(kt));
+  if(o.std)G(S,q0+0.17,0.05,o.std*kt);
 }
 const PVC=()=>({pol:pick([1,-1]),w:rand(0.13,0.17),amp:rand(1.1,1.5),s:rand(0.25,0.5),t:rand(0.35,0.5)});
-function sinus(S,rate,o={},from=-1,to=T+1){const rr=60/rate;let t=from+Math.random()*rr;while(t<to){beat(S,t,{p:'norm',rr,...o});t+=rr}}
-function bg(S,f){for(let i=0;i<N;i++)S[i]+=f(i/FS)}
+function sinus(S,rate,o={},from=-1,to=T+1){const rr=60/rate;let t=from+RNG()*rr;while(t<to){beat(S,t,{p:'norm',rr,...o});t+=rr}}
+function bg(S,f,k){const m=k==='atr'?L.a:k==='v'?L.vf:1;for(let i=0;i<N;i++)S[i]+=m*f(i/FS)}
 
 const GEN={
   nsr:S=>sinus(S,ri(62,95)),
@@ -251,13 +260,13 @@ const GEN={
   sarrest:S=>{const rr=60/ri(66,84);let t=rand(0.1,0.5);const stop=rand(1.6,2.6);while(t<stop){beat(S,t,{p:'norm',rr});t+=rr}t+=rr*rand(1.45,1.75);while(t<T+1){beat(S,t,{p:'norm',rr});t+=rr}},
   sexit:S=>{const rr=60/ri(66,84);let t=rand(0.1,0.5);const stop=rand(1.6,2.6);while(t<stop){beat(S,t,{p:'norm',rr});t+=rr}t+=rr;while(t<T+1){beat(S,t,{p:'norm',rr});t+=rr}},
   sescape:S=>{const rr=60/ri(68,82);let t=rand(0.1,0.4);const stop=rand(1.5,2.2);while(t<stop){beat(S,t,{p:'norm',rr});t+=rr}
-    t+=rand(0.55,0.75);beat(S,t,{p:Math.random()<0.5?null:'inv',pr:0.07,rr});t+=rr*rand(1.0,1.15);while(t<T+1){beat(S,t,{p:'norm',rr});t+=rr}},
+    t+=rand(0.55,0.75);beat(S,t,{p:RNG()<0.5?null:'inv',pr:0.07,rr});t+=rr*rand(1.0,1.15);while(t<T+1){beat(S,t,{p:'norm',rr});t+=rr}},
   asys:S=>{},
   pac:S=>{const rr=60/ri(66,84);let t=rand(0.1,0.5),k=0,hit=ri(3,4);while(t<T+1){k++;if(k===hit){const e=t-rr+rr*rand(0.6,0.7);beat(S,e,{p:'abn',pr:0.14,rr});t=e+rr*1.05}beat(S,t,{p:'norm',rr});t+=rr}},
-  pjc:S=>{const rr=60/ri(66,84);let t=rand(0.1,0.5),k=0,hit=ri(3,4),kind=Math.random()<0.5;while(t<T+1){k++;if(k===hit){const e=t-rr+rr*rand(0.62,0.7);beat(S,e,kind?{p:'inv',pr:0.08,rr}:{p:null,ret:Math.random()<0.5,rr});t=e+rr*1.05}beat(S,t,{p:'norm',rr});t+=rr}},
+  pjc:S=>{const rr=60/ri(66,84);let t=rand(0.1,0.5),k=0,hit=ri(3,4),kind=RNG()<0.5;while(t<T+1){k++;if(k===hit){const e=t-rr+rr*rand(0.62,0.7);beat(S,e,kind?{p:'inv',pr:0.08,rr}:{p:null,ret:RNG()<0.5,rr});t=e+rr*1.05}beat(S,t,{p:'norm',rr});t+=rr}},
   pat:S=>{const rr=60/ri(68,82);let t=rand(0.1,0.4);const sw=rand(1.8,2.6);while(t<sw){beat(S,t,{p:'norm',rr});t+=rr}const r2=60/ri(165,200);t-=rr*0.45;while(t<T+1){beat(S,t,{p:'abn',pr:0.12,rr:r2,tAmp:0.2});t+=r2}},
   mat:S=>{const kinds=['norm','inv','tall','notch'];let t=rand(0,0.3);while(t<T+1){const rr=rand(0.42,0.66);beat(S,t,{p:pick(kinds),pr:rand(0.11,0.2),rr});t+=rr}},
-  junc:S=>{const inv=Math.random()<0.5;sinus(S,ri(42,58),inv?{p:'inv',pr:0.07}:{p:null})},
+  junc:S=>{const inv=RNG()<0.5;sinus(S,ri(42,58),inv?{p:'inv',pr:0.07}:{p:null})},
   pvcu:S=>{const rr=60/ri(66,84),sh=PVC();let t=rand(0.1,0.5),k=0;const hits=new Set([ri(2,3),ri(5,7)]);while(t<T+1){k++;if(hits.has(k)){beat(S,t-rr+rr*rand(0.58,0.66),{wide:sh});t+=rr}else{beat(S,t,{p:'norm',rr});t+=rr}}},
   pvcm:S=>{const rr=60/ri(66,84);let t=rand(0.1,0.5),k=0,flip=pick([1,-1]);const hits=[ri(2,3),ri(4,5),ri(6,8)];
     while(t<T+1){k++;const h=hits.indexOf(k);if(h>=0){const sh=PVC();sh.pol=h%2?flip:-flip;sh.w=[0.13,0.18,0.15][h];beat(S,t-rr+rr*rand(0.56,0.68),{wide:sh});t+=rr}else{beat(S,t,{p:'norm',rr});t+=rr}}},
@@ -265,10 +274,10 @@ const GEN={
   trigem:S=>{const rr=60/ri(66,80),sh=PVC();let t=rand(-0.2,0.3);while(t<T+1){beat(S,t,{p:'norm',rr});beat(S,t+rr,{p:'norm',rr});beat(S,t+rr*1.6,{wide:sh});t+=rr*3}},
   idio:S=>{const rr=60/ri(30,42),sh=PVC();sh.w=rand(0.16,0.2);let t=rand(0.1,rr);while(t<T+1){beat(S,t,{wide:sh});t+=rr}},
   vt:S=>{const rr=60/ri(150,210),sh=PVC();sh.w=rand(0.14,0.17);sh.amp=rand(1.0,1.3);sh.t=0.5;let t=rand(0,rr);while(t<T+1){beat(S,t,{wide:sh});t+=rr}},
-  vf:S=>{const c=[...Array(5)].map(()=>({f:rand(3.5,7),p:rand(0,6),a:rand(0.12,0.28)})),m=rand(0.5,1.2);bg(S,t=>c.reduce((s,x)=>s+x.a*Math.sin(2*Math.PI*x.f*t+x.p),0)*(0.65+0.35*Math.sin(2*Math.PI*t/m)))},
-  tdp:S=>{const f=rand(3.6,4.4),per=rand(2.2,2.8),ph=rand(0,3);bg(S,t=>{const env=0.95*Math.sin(Math.PI*(t+ph)/per*2)+0.08,x=Math.sin(2*Math.PI*f*t);return env*Math.sign(x)*Math.pow(Math.abs(x),0.7)})},
+  vf:S=>{const c=[...Array(5)].map(()=>({f:rand(3.5,7),p:rand(0,6),a:rand(0.12,0.28)})),m=rand(0.5,1.2);bg(S,t=>c.reduce((s,x)=>s+x.a*Math.sin(2*Math.PI*x.f*t+x.p),0)*(0.65+0.35*Math.sin(2*Math.PI*t/m)),'v')},
+  tdp:S=>{const f=rand(3.6,4.4),per=rand(2.2,2.8),ph=rand(0,3);bg(S,t=>{const env=0.95*Math.sin(Math.PI*(t+ph)/per*2)+0.08,x=Math.sin(2*Math.PI*f*t);return env*Math.sign(x)*Math.pow(Math.abs(x),0.7)},'v')},
   afib:S=>{fwaves(S,0.085);let t=rand(0,0.4);while(t<T+1){const rr=rand(0.42,1.05);beat(S,t,{p:null,rr,tAmp:0.22});t+=rr}},
-  aflut:S=>{const f=rand(4.7,5.2),ph=rand(0,1),cond=pick([2,4,4,3]),fw=1/f;bg(S,t=>{const x=((t*f+ph)%1+1)%1;return 0.1-0.36*(x<0.78?x/0.78:(1-x)/0.22)});
+  aflut:S=>{const f=rand(4.7,5.2),ph=rand(0,1),cond=pick([2,4,4,3]),fw=1/f;bg(S,t=>{const x=((t*f+ph)%1+1)%1;return 0.1-0.36*(x<0.78?x/0.78:(1-x)/0.22)},'atr');
     let t=(1-ph)/f+0.06-fw*4;while(t<T+1){beat(S,t,{p:null,rr:fw*cond,tAmp:0.1});t+=fw*cond}},
   psvt:S=>{const rr=60/ri(165,215);let t=rand(0,rr);while(t<T+1){beat(S,t,{p:null,rr,tAmp:0.22});t+=rr}},
   avb1:S=>sinus(S,ri(60,82),{pr:rand(0.26,0.36)}),
@@ -277,20 +286,21 @@ const GEN={
   avb2ii:S=>{const rr=60/ri(70,90),grp=pick([3,4]),pr=rand(0.16,0.19);let t=rand(-0.2,0.3),k=0;
     while(t<T+1){if(k%grp<grp-1)beat(S,t,{p:'norm',pr,rr});else P(S,t-pr+0.05,'norm');t+=rr;k++}},
   avb3:S=>{const pa=60/ri(72,95);let t=rand(-0.3,0.3);while(t<T+1){P(S,t,'norm');t+=pa}
-    const vr=60/ri(32,45),wide=Math.random()<0.5,sh=PVC();sh.w=0.16;let q=rand(0.2,vr);while(q<T+1){beat(S,q,wide?{wide:sh}:{p:null,rr:vr});q+=vr}},
+    const vr=60/ri(32,45),wide=RNG()<0.5,sh=PVC();sh.w=0.16;let q=rand(0.2,vr);while(q<T+1){beat(S,q,wide?{wide:sh}:{p:null,rr:vr});q+=vr}},
   wpw:S=>sinus(S,ri(64,90),{pr:0.1,delta:1}),
   lgl:S=>sinus(S,ri(66,95),{pr:0.09}),
-  afwpw:S=>{fwaves(S,0.03);let t=rand(0,0.3);while(t<T+1){const rr=rand(0.24,0.42),pol=Math.random()<0.85?1:-1;beat(S,t,{wide:{pol,w:rand(0.09,0.16),amp:rand(0.8,1.5),s:rand(0.2,0.4),t:rand(0.25,0.4)}});t+=rr}},
+  afwpw:S=>{fwaves(S,0.03);let t=rand(0,0.3);while(t<T+1){const rr=rand(0.24,0.42),pol=RNG()<0.85?1:-1;beat(S,t,{wide:{pol,w:rand(0.09,0.16),amp:rand(0.8,1.5),s:rand(0.2,0.4),t:rand(0.25,0.4)}});t+=rr}},
   hyperk:S=>sinus(S,ri(66,88),{pAmp:0.07,peak:1,rw:0.013}),
   hypok:S=>sinus(S,ri(66,88),{tAmp:0.07,u:1,std:-0.05}),
   hyperca:S=>sinus(S,ri(66,84),{qt:0.28}),
   hypoca:S=>sinus(S,ri(62,80),{qt:0.54}),
-  hypotherm:S=>{sinus(S,ri(38,50),{j:1});if(Math.random()<0.6)bg(S,t=>0.035*Math.sin(2*Math.PI*9.3*t)*Math.max(0,Math.sin(2*Math.PI*t/2.3)))},
+  hypotherm:S=>{sinus(S,ri(38,50),{j:1});if(RNG()<0.6)bg(S,t=>0.035*Math.sin(2*Math.PI*9.3*t)*Math.max(0,Math.sin(2*Math.PI*t/2.3)))},
   dig:S=>sinus(S,ri(60,80),{pr:0.22,dig:1}),
 };
-function fwaves(S,a){const c=[...Array(3)].map(()=>({f:rand(5,8),p:rand(0,6)}));bg(S,t=>a*c.reduce((s,x)=>s+Math.sin(2*Math.PI*x.f*t+x.p),0)/1.6)}
-function makeStrip(id){
-  const S=new Float32Array(N);GEN[id](S);
+function fwaves(S,a){const c=[...Array(3)].map(()=>({f:rand(5,8),p:rand(0,6)}));bg(S,t=>a*c.reduce((s,x)=>s+Math.sin(2*Math.PI*x.f*t+x.p),0)/1.6,'atr')}
+function makeLead(id,lead,seed,dur){
+  T=dur;N=Math.round(T*FS);L=LEADS[lead];RNG=mulberry(seed);
+  const S=new Float32Array(N);GEN[id](S);RNG=Math.random;
   const w=rand(0.15,0.3),wp=rand(0,6),wa=rand(0.02,0.05);
   for(let i=0;i<N;i++){const t=i/FS;S[i]+=wa*Math.sin(2*Math.PI*w*t+wp)+(Math.random()-0.5)*0.022}
   return S;
@@ -298,12 +308,14 @@ function makeStrip(id){
 
 // ================= DRAW =================
 const cv=document.getElementById('strip');
-let SIG=null;
+let SIG=null,FMT='strip';
 function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+const LAYOUT=[['I','aVR','V1','V4'],['II','aVL','V2','V5'],['III','aVF','V3','V6']];
 function draw(){
   if(!SIG)return;
-  const cssW=Math.max(640,cv.parentElement.clientWidth),mmW=10+T*25,px=cssW/mmW,mmH=42,cssH=Math.round(mmH*px);
-  const dpr=window.devicePixelRatio||1;
+  const tw=FMT==='12',dur=tw?10:6,mmW=10+dur*25,mmH=tw?124:42,minW=tw?960:640;
+  cv.style.minWidth=minW+'px';
+  const cssW=Math.max(minW,cv.parentElement.clientWidth),px=cssW/mmW,cssH=Math.round(mmH*px),dpr=window.devicePixelRatio||1;
   cv.style.height=cssH+'px';cv.width=Math.round(cssW*dpr);cv.height=Math.round(cssH*dpr);
   const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);
   c.fillStyle=cssVar('--paper');c.fillRect(0,0,cssW,cssH);
@@ -314,15 +326,26 @@ function draw(){
   c.lineWidth=1.1;c.strokeStyle=cssVar('--grid-b');
   for(let m=0;m<=mmW;m+=5)line(m*px+.5,0,m*px+.5,cssH);
   for(let m=0;m<=mmH;m+=5)line(0,m*px+.5,cssW,m*px+.5);
-  const x0=10*px,base=26*px;
-  // 1-second ticks along the top
-  c.strokeStyle=cssVar('--tick');c.lineWidth=1.6;
-  for(let s=0;s<=T;s++)line(x0+s*25*px,0,x0+s*25*px,2.5*px);
-  // trace: 1 mV calibration pulse, then the strip
-  c.strokeStyle=cssVar('--trace');c.lineWidth=1.5;c.lineJoin='round';c.beginPath();
-  c.moveTo(1.5*px,base);c.lineTo(3*px,base);c.lineTo(3*px,base-10*px);c.lineTo(8*px,base-10*px);c.lineTo(8*px,base);c.lineTo(x0,base);
-  for(let i=0;i<N;i++){const v=Math.max(-1.6,Math.min(2.5,SIG[i]));c.lineTo(x0+(i/FS)*25*px,base-v*10*px)}
-  c.stroke();
+  const x0=10*px,trc=cssVar('--trace');
+  const cal=base=>{c.moveTo(1.5*px,base);c.lineTo(3*px,base);c.lineTo(3*px,base-10*px);c.lineTo(8*px,base-10*px);c.lineTo(8*px,base);c.lineTo(x0,base)};
+  const trace=(S,t0,t1,xs,base,lo,hi)=>{const i0=Math.round(t0*FS),i1=Math.min(S.length-1,Math.round(t1*FS));
+    for(let i=i0;i<=i1;i++){const v=Math.max(lo,Math.min(hi,S[i])),x=xs+((i-i0)/FS)*25*px,y=base-v*10*px;if(i===i0)c.moveTo(x,y);else c.lineTo(x,y)}};
+  if(!tw){
+    c.strokeStyle=cssVar('--tick');c.lineWidth=1.6;
+    for(let s=0;s<=6;s++)line(x0+s*25*px,0,x0+s*25*px,2.5*px);
+    c.strokeStyle=trc;c.lineWidth=1.5;c.lineJoin='round';c.beginPath();
+    const base=26*px;cal(base);trace(SIG.II,0,6,x0,base,-1.6,2.5);c.stroke();return;
+  }
+  c.strokeStyle=trc;c.fillStyle=trc;c.lineWidth=1.3;c.lineJoin='round';
+  c.font=`600 ${Math.max(11,Math.round(3.4*px))}px ${cssVar('--f-mono')||'monospace'}`;
+  for(let r=0;r<4;r++){
+    const base=(4+r*30+17)*px;c.beginPath();cal(base);
+    if(r<3)LAYOUT[r].forEach((ld,k)=>{const xs=x0+k*62.5*px;
+      if(k){c.moveTo(xs,base-3.5*px);c.lineTo(xs,base+3.5*px)}
+      trace(SIG[ld],k*2.5,(k+1)*2.5,xs,base,-1.45,1.45);c.fillText(ld,xs+1.5*px,base-10.5*px)});
+    else{trace(SIG.II,0,10,x0,base,-1.45,1.45);c.fillText('II',x0+1.5*px,base-10.5*px)}
+    c.stroke();
+  }
 }
 let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(draw,80)});
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw)}catch(e){}
@@ -345,7 +368,7 @@ function match(input){
 }
 
 // ================= STATE =================
-const ST={cats:CATS.slice()},SC={ok:0,n:0,st:0};
+const ST={cats:CATS.slice(),fmt:'mix'},SC={ok:0,n:0,st:0};
 try{Object.assign(ST,JSON.parse(localStorage.getItem('ekg-set')||'{}'))}catch(e){}
 try{Object.assign(SC,JSON.parse(localStorage.getItem('ekg-sc')||'{}'))}catch(e){}
 ST.cats=ST.cats.filter(c=>CATS.includes(c));if(!ST.cats.length)ST.cats=CATS.slice();
@@ -358,10 +381,17 @@ function renderCats(){
   const el=$('#cats');el.innerHTML='';
   CATS.forEach(c=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=c;b.setAttribute('aria-pressed',ST.cats.includes(c));
     b.onclick=()=>{if(ST.cats.includes(c)){if(ST.cats.length>1)ST.cats=ST.cats.filter(x=>x!==c)}else ST.cats.push(c);save();renderCats()};el.appendChild(b)});
+  const fm=$('#fmt');fm.innerHTML='';
+  [['mix','Mix (mostly strips)'],['strip','Rhythm strips only'],['12','12-leads only']].forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',ST.fmt===v);
+    b.onclick=()=>{ST.fmt=v;save();renderCats();next()};fm.appendChild(b)});
 }
 function load(id,isStudy){
-  CUR=byId[id];study=!!isStudy;done=study;last=id;SIG=makeStrip(id);draw();
-  $('#s-mode').innerHTML=study?`<span class="study">Study strip: ${esc(CUR.n)}</span>`:'';
+  CUR=byId[id];study=!!isStudy;done=study;last=id;
+  FMT=ST.fmt==='12'?'12':ST.fmt==='strip'?'strip':(Math.random()<0.3?'12':'strip');
+  const seed=Math.floor(Math.random()*1e9),dur=FMT==='12'?10:6;SIG={};
+  for(const ld of (FMT==='12'?Object.keys(LEADS):['II']))SIG[ld]=makeLead(id,ld,seed,dur);
+  cv.setAttribute('aria-label',FMT==='12'?'12-lead EKG':'EKG rhythm strip');draw();
+  const sm=$('#s-mode');sm.hidden=!study;sm.innerHTML=study?`<span class="study">Study strip: ${esc(CUR.n)}</span>`:'';
   $('#guess').value='';$('#fb').hidden=true;
   if(study)showAnswer(null,null);
 }
