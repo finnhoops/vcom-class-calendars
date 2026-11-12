@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>EKG Lecture Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column. Progress bar + mode chips on top, one question card, feedback inside the card, missed list below. */
+:root{
+  --bg:#EEF2F4; --surface:#FFFFFF; --fg:#16232D; --muted:#5A6A76; --line:#D3DCE2;
+  --accent:#0E6A75; --accent-fg:#FFFFFF; --good:#1C7C3F; --good-bg:#E3F3E8; --bad:#B42318; --bad-bg:#FBE8E6; --field:#F7F9FA;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F171C; --surface:#172229; --fg:#E4ECF0; --muted:#94A6B2; --line:#2A3A44;
+  --accent:#4FB7C2; --accent-fg:#06272B; --good:#6FD08F; --good-bg:#143222; --bad:#FF8A7E; --bad-bg:#3A1A17; --field:#1D2A32; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F171C; --surface:#172229; --fg:#E4ECF0; --muted:#94A6B2; --line:#2A3A44;
+  --accent:#4FB7C2; --accent-fg:#06272B; --good:#6FD08F; --good-bg:#143222; --bad:#FF8A7E; --bad-bg:#3A1A17; --field:#1D2A32; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:700;font-size:2rem;margin:0;line-height:1}
+h2{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0}
+.sub{color:var(--muted);font-size:.9rem;margin:4px 0 0}
+.stats{display:flex;gap:14px;font-family:var(--f-mono);font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.stats b{color:var(--fg);font-weight:500}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{border:1px solid var(--line);background:var(--field);color:var(--fg);border-radius:999px;padding:5px 12px;font:inherit;font-size:.85rem;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.bar{height:8px;border-radius:4px;background:var(--field);overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:var(--accent);width:0}
+.ctl{display:flex;flex-direction:column;gap:12px}
+.qcard{display:flex;flex-direction:column;gap:14px}
+.qmeta{display:flex;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.q{font-size:1.15rem;font-weight:700;margin:0;text-wrap:pretty}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{text-align:left;font:inherit;padding:12px 14px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--fg);cursor:pointer;display:flex;gap:10px}
+.opt .k{font-family:var(--f-mono);color:var(--muted);flex:none}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt:disabled{cursor:default}
+.opt.right{background:var(--good-bg);border-color:var(--good)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad)}
+.fb{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.verdict{font-family:var(--f-display);font-weight:700;font-size:1.4rem}
+.verdict.ok{color:var(--good)} .verdict.no{color:var(--bad)}
+.why{margin:0}
+.why b{color:var(--bad)}
+.src{font-size:.85rem;color:var(--muted);margin:0}
+button.b{font:inherit;font-weight:700;border-radius:8px;padding:10px 18px;cursor:pointer;border:1px solid var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-fg)}
+button.ghost{background:transparent;color:var(--accent)}
+button:focus-visible,.chip:focus-visible,.opt:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details summary{cursor:pointer;font-weight:700}
+.missed{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.mi{border-top:1px solid var(--line);padding-top:10px;font-size:.92rem}
+.mi .cnt{font-family:var(--f-mono);color:var(--bad);font-size:.8rem}
+.mi p{margin:2px 0}
+.done{text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center}
+.note{font-size:.82rem;color:var(--muted);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>EKG Lecture Quiz</h1>
+      <p class="sub">Drugs and concepts from the EKG lectures and ECG Interpretation &amp; Clinical Application.</p>
+    </div>
+    <div class="stats" id="stats" aria-live="polite"></div>
+  </header>
+
+  <section class="panel ctl">
+    <div class="row" id="modes"></div>
+    <details>
+      <summary>Topics</summary>
+      <div class="row" id="topics" style="margin-top:10px"></div>
+    </details>
+    <div class="bar" aria-hidden="true"><i id="barfill"></i></div>
+    <p class="note" id="progress"></p>
+  </section>
+
+  <section class="panel qcard" id="card" aria-live="polite"></section>
+
+  <details class="panel" id="missedPanel">
+    <summary id="missedSum">Questions you've missed</summary>
+    <div class="missed" id="missed"></div>
+    <div class="row" style="margin-top:12px"><button class="b ghost" type="button" id="resetAll">Reset all progress</button></div>
+  </details>
+</div>
+
+<script>
+// [topic, question, correct answer, explanation + source, [wrong, why wrong], ...]
+const T={ds:'Drugs: sinus & SVT',dv:'Drugs: ventricular',db:'Drugs: blocks & WPW',dm:'Drugs: MI & PE',dc:'Drugs that cause changes',ph:'Physiology',eb:'EKG basics',rr:'Reading rhythms',ac:'Arrhythmia causes',cb:'Conduction blocks',ax:'Axis & hypertrophy',mi:'Ischemia & MI',oc:'Other conditions',an:'Anesthesia'};
+const Q=[
+['ds','What are the two acute drugs for sinus bradycardia?','Atropine or glycopyrrolate','Acute: stop the stimulation, then atropine or glycopyrrolate. Chronic: pacemaker or thyroid therapy. [Lec 4 s25]',['Adenosine or verapamil','Those are AV blocking agents that slow conduction. Lecture 4 lists them for sinus TACHycardia.'],['Esmolol or metoprolol','Beta blockers slow the heart even more. They\'re for sinus tach.'],['Lidocaine or amiodarone','Those treat ventricular arrhythmias like PVCs and VT.']],
+['ds','Which two AV blocking agents does Lecture 4 list for sinus tachycardia?','Adenosine and verapamil','Sinus tach: fix the cause, vagal maneuvers, AV blockers (adenosine, verapamil), beta blockers (esmolol, metoprolol). [Lec 4 s21]',['Atropine and glycopyrrolate','Those speed the heart up. They\'re for bradycardia.'],['Lidocaine and procainamide','Those are for ventricular arrhythmias.'],['Digoxin and diltiazem','Not the pair Lecture 4 lists. Digoxin shows up for A-fib rate control.']],
+['ds','Which beta blockers does Lecture 4 list for sinus tachycardia?','Esmolol and metoprolol','[Lec 4 s21]',['Labetalol and propranolol','Not the ones named on the slide.'],['Verapamil and diltiazem','Those are calcium channel blockers, not beta blockers.'],['Atropine and glycopyrrolate','Those are anticholinergics that raise heart rate.']],
+['ds','What is the adenosine dose for PSVT in Lecture 5?','6 mg IV push','PSVT: adenosine 6 mg IVP, esmolol 1 mg/kg IVP, vagal maneuvers. [Lec 5 s19]',['1 mg/kg IV push','That\'s the esmolol dose for PSVT.'],['0.4 mg','That\'s sublingual nitroglycerin for MI.'],['300 mg IV bolus','That\'s amiodarone for V-fib after the 2nd shock.']],
+['ds','What is the esmolol dose for PSVT in Lecture 5?','1 mg/kg IV push','[Lec 5 s19] Your MHSA drug card says 0.2-0.5 mg/kg, so check which one your exam wants.',['6 mg IV push','That\'s adenosine.'],['1-1.5 mg/kg IV','That\'s lidocaine for VT/VF.'],['1-2 g IV','That\'s magnesium for torsades.']],
+['ds','Which vagal maneuvers does Lecture 5 list for PSVT?','Carotid massage, Valsalva, squatting','[Lec 5 s19] Lecture 4 lists gagging instead of squatting for sinus tach.',['Atropine and glycopyrrolate','Those are drugs, and they block the vagus nerve.'],['Defibrillation','That\'s for V-fib and pulseless VT.'],['Head-down tilt and fluids','Not on the slide.']],
+['ds','What three drug types control the rate in atrial fibrillation?','Beta blockers, calcium channel blockers, digoxin','[Lec 5 s25; ECG IC s24 lists beta blockers and CCBs]',['Adenosine, atropine, lidocaine','None of those are listed for A-fib rate control.'],['Amiodarone, procainamide, magnesium','Those show up for VT, WPW and torsades, not A-fib rate control.'],['Nitroglycerin, morphine, aspirin','That\'s MI treatment.']],
+['ds','Besides rate control, what else is used to treat A-fib?','Cardioversion and anticoagulants','[Lec 5 s26; ECG IC s24]',['CPR and defibrillation','That\'s for V-fib.'],['Pacing','Pacing is for heart blocks and bradycardia.'],['Lidocaine','Lidocaine is for ventricular arrhythmias.']],
+['ds','What is carotid massage used for in atrial flutter?','Diagnosis only, not treatment','[Lec 5 s21]',['It\'s the first-line treatment','The slide says it\'s for diagnosis, NOT treatment.'],['It converts flutter to sinus rhythm','Not according to the slide.'],['It\'s contraindicated','The slide uses it for diagnosis.']],
+['ds','A patient has new-onset A-fib before an elective case. What do you do?','Cancel the case and get a cardiac workup','[ECG IC s24]',['Rate-control and proceed','The slide says new-onset A-fib means cancel and work it up.'],['Give adenosine and proceed','Adenosine isn\'t the A-fib plan here, and the case shouldn\'t go ahead.'],['Defibrillate','Defibrillation is for V-fib and pulseless VT.']],
+['ds','Besides treating the cause, what drugs are listed for MAT?','Verapamil (CCB), beta blockers if tolerated, magnesium sulfate','Antiarrhythmics only rarely. [ECG IC s28]',['Adenosine 6 mg','That\'s the PSVT dose.'],['Atropine','Atropine raises heart rate. MAT is already a tachycardia.'],['Lidocaine','Lidocaine is for ventricular arrhythmias.']],
+['ds','Which calcium channel blockers are named for PAT?','Diltiazem and verapamil','[ECG IC s30]',['Nifedipine and amlodipine','Not named on the slide.'],['Esmolol and metoprolol','Those are beta blockers.'],['Adenosine and digoxin','Not calcium channel blockers.']],
+['ds','For persistent PAT, which antiarrhythmics are listed?','Flecainide or amiodarone','Or ablation of the focus. [ECG IC s30]',['Lidocaine or procainamide','Those are the ventricular-arrhythmia drugs on these slides.'],['Atropine or isoproterenol','Those speed the heart up.'],['Magnesium','Magnesium is listed for MAT and torsades.']],
+['ds','What does ECG IC say about adenosine in PAT?','It slows AV conduction but may not stop PAT the way it stops AVNRT','[ECG IC s30]',['It always stops PAT','The slide says it may NOT stop it.'],['It\'s contraindicated in PAT','It can be used; it just may not convert the rhythm.'],['It speeds up conduction','Adenosine slows conduction through the AV node.']],
+['ds','PSVT becomes hemodynamically unstable. What do you do?','Synchronized cardioversion / ACLS','[ECG IC s26]',['Unsynchronized defibrillation','Unsynchronized shocks are for pulseless VT and VF.'],['Atropine','Atropine speeds the heart; PSVT is already fast.'],['Wait for it to stop on its own','Unstable means treat it now.']],
+['ds','Which drug type is used for sinus tach on ECG IC once the cause is treated and it stays symptomatic?','Beta blockers or calcium channel blockers','[ECG IC s6]',['Atropine','That speeds it up.'],['Lidocaine','That\'s for ventricular arrhythmias.'],['Epinephrine','That speeds it up even more.']],
+
+['dv','What is the lidocaine dose for PVCs in Lecture 6?','1 mg/kg IV push','[Lec 6 s6-9]',['1-2 mg/kg','That\'s ECG IC\'s range (slide 34), not Lecture 6.'],['6 mg IV push','That\'s adenosine.'],['1 mg every 3-5 minutes','That\'s epinephrine for V-fib.']],
+['dv','Which of these is one of the PVC "rules of malignancy"?','R-on-T phenomenon','The rules: frequent random PVCs (couplets, over 6/min), 3+ in a row, multiform PVCs, R-on-T, PVCs during an acute MI or with structural heart disease. [Lec 6 s9; ECG IC s34]',['Having a compensatory pause','Every PVC has a compensatory pause. That\'s how you identify it, not a danger sign.'],['A single isolated PVC','One random PVC isn\'t a rule. FREQUENT random PVCs are.'],['A narrow QRS','PVCs are wide. Narrow points to a supraventricular origin.']],
+['dv','What is the amiodarone regimen for PVCs on ECG IC?','150 mg over 10 min, then 1 mg/min for 6 hr, then 0.5 mg/min','[ECG IC s34]',['300 mg IV bolus','That\'s amiodarone for V-fib or pulseless VT after the 2nd shock.'],['1-2 g over 5-15 min','That\'s magnesium for torsades.'],['6 mg IV push','That\'s adenosine.']],
+['dv','What is the epinephrine dose in V-fib or pulseless VT?','1 mg IV/IO every 3-5 minutes','[ECG IC s36, s40, s44]',['0.4 mg every 5 minutes','That\'s sublingual nitroglycerin.'],['1 mg/kg','Epinephrine isn\'t weight-based here; 1 mg/kg is the PSVT esmolol dose.'],['A single 1 mg dose only','It\'s repeated every 3-5 minutes.']],
+['dv','What is the amiodarone dose when V-fib persists after the 2nd shock?','300 mg IV bolus, then 150 mg if needed','[ECG IC s36, s40]',['150 mg over 10 minutes','That\'s for STABLE VT, polymorphic VT and PVCs.'],['1-1.5 mg/kg','That\'s lidocaine, the alternative if there\'s no amiodarone.'],['6 mg rapid push','That\'s adenosine.']],
+['dv','In V-fib with no amiodarone available, what do you give?','Lidocaine 1-1.5 mg/kg IV','[ECG IC s36, s40]',['Procainamide 20-50 mg/min','That\'s for STABLE VT. A slow infusion has no place in arrest.'],['Magnesium 1-2 g','That\'s first-line for torsades specifically.'],['Adenosine 6 mg','That\'s for PSVT.']],
+['dv','What defibrillation energy is used for V-fib / pulseless VT?','Highest available: 200 J biphasic or 360 J monophasic','[ECG IC s36, s40]',['100 J synchronized','That\'s the starting point for synchronized cardioversion of UNSTABLE VT WITH A PULSE.'],['50 J','Too low per the slide.'],['No shock; drugs only','V-fib needs defibrillation right away.']],
+['dv','What is the amiodarone dose for STABLE wide-complex VT?','150 mg IV over 10 min, repeat as needed, then 1 mg/min for 6 hr','[ECG IC s38]',['300 mg IV bolus','That\'s the pulseless VT / V-fib dose.'],['0.5 mg/min only','That\'s the later step of the PVC infusion.'],['1-2 g IV','That\'s magnesium.']],
+['dv','What is the lidocaine regimen for stable VT?','1-1.5 mg/kg IV, then a 1-4 mg/min infusion','[ECG IC s38]',['1 mg/kg only, no infusion','That\'s Lecture 6\'s PVC dose. Stable VT adds the infusion.'],['150 mg over 10 minutes','That\'s amiodarone.'],['20-50 mg/min','That\'s procainamide.']],
+['dv','How is procainamide given for stable VT?','20-50 mg/min IV until the arrhythmia stops, hypotension develops, or the QRS widens a lot','[ECG IC s38]',['300 mg bolus','That\'s amiodarone in arrest.'],['6 mg push','That\'s adenosine.'],['Until the patient is pulseless','No. You stop at suppression, hypotension, or significant QRS widening.']],
+['dv','Unstable VT WITH a pulse: what is the treatment?','Synchronized cardioversion, starting at 100 J','Amiodarone or procainamide can be given alongside. [ECG IC s39]',['Unsynchronized defibrillation at 360 J','Unsynchronized is for PULSELESS VT and V-fib.'],['Adenosine','Adenosine is for PSVT.'],['Atropine','VT is already fast.']],
+['dv','What is first-line for torsades de pointes?','Magnesium 1-2 g IV over 5-15 min, whatever the Mg level','[ECG IC s42]',['Amiodarone','Amiodarone prolongs the QT [Lec 9 s30], and a long QT causes torsades.'],['Adenosine','Adenosine is for PSVT.'],['Procainamide','Not first-line on the slide. Antiarrhythmics are listed as a CAUSE of torsades [Lec 6 s26].']],
+['dv','Besides magnesium, what drug can shorten the QT in torsades?','Isoproterenol (or temporary overdrive pacing)','[ECG IC s42]',['Ondansetron','Ondansetron PROLONGS the QT. Avoid it.'],['Amiodarone','Amiodarone prolongs the QT.'],['Haloperidol','Haloperidol prolongs the QT.']],
+['dv','Which anesthesia drugs should you avoid in torsades-prone patients?','Haloperidol, droperidol, ondansetron','They prolong the QT. [ECG IC s42]',['Magnesium','Magnesium treats torsades.'],['Isoproterenol','Isoproterenol shortens the QT.'],['Epinephrine','Epinephrine isn\'t on the avoid list.']],
+['dv','What does Lecture 6 list as the treatment for sustained V-tach?','Defibrillation and ACLS','[Lec 6 s18]',['Lidocaine 1 mg/kg','Lecture 6 gives that for PVCs, not sustained VT.'],['Vagal maneuvers','Carotid massage won\'t affect VT. That\'s one way to tell it from PSVT.'],['Observation','Sustained VT is an emergency.']],
+['dv','For polymorphic VT with a pulse, which drugs suppress it?','Amiodarone 150 mg IV over 10 min, or lidocaine 1-1.5 mg/kg IV','Also treat ischemia, electrolytes and drug toxicity. [ECG IC s44]',['Adenosine 6 mg','That\'s for PSVT.'],['Digoxin','Digoxin is for A-fib rate control.'],['Atropine','Not for VT.']],
+
+['db','A patient in Mobitz I becomes symptomatic. What drug?','Atropine','Usually no treatment is needed. [ECG IC s49]',['Isoproterenol','That\'s the bridge to pacing in THIRD-degree block.'],['Adenosine','Adenosine blocks the AV node and would make it worse.'],['Immediate pacing','Pacing is usually not needed in Mobitz I unless the patient is symptomatic.']],
+['db','Why pace early in Mobitz II?','Atropine may not work','[ECG IC s51]',['Atropine always works, so pacing is backup','The slide says atropine may NOT be effective.'],['Mobitz II needs no treatment','Mobitz II can progress, so it needs pacing readiness.'],['Adenosine fixes it','Adenosine worsens AV conduction.']],
+['db','In third-degree block, what drug can bridge to pacing?','Isoproterenol (beta-adrenergic, raises HR)','Atropine is usually ineffective. [ECG IC s53]',['Atropine','Atropine is typically ineffective in complete heart block.'],['Esmolol','Esmolol slows the heart and the AV node.'],['Verapamil','CCBs worsen AV blocks.']],
+['db','Which two drug classes make AV blocks worse?','Beta blockers and calcium channel blockers','They slow AV node conduction. [ECG IC s51, s53]',['Atropine and isoproterenol','Those improve rate and conduction.'],['Lidocaine and magnesium','Not listed as worsening blocks.'],['Nitrates and morphine','Not listed as worsening blocks.']],
+['db','What do you give a stable patient with WPW?','Procainamide or amiodarone','They slow conduction through the accessory pathway. [ECG IC s56]',['Adenosine','AV nodal blockers push conduction down the accessory pathway. Avoid them.'],['Verapamil','An AV nodal blocker. Avoid in WPW.'],['Metoprolol','Beta blockers are AV nodal blockers. Avoid in WPW.']],
+['db','Why avoid adenosine, verapamil and beta blockers in WPW?','They promote conduction down the accessory pathway','[ECG IC s56]',['They prolong the QT','That isn\'t the reason on the slide.'],['They cause asystole','Not the reason given.'],['They don\'t work on any SVT','Adenosine is used for PSVT and LGL, just not in WPW.']],
+['db','Unstable WPW reentry (rapid A-fib or SVT): what is indicated?','Synchronized cardioversion','[ECG IC s56]',['Adenosine','Avoid AV nodal blockers in WPW.'],['Digoxin','Not on the slide for WPW.'],['Atropine','It\'s already fast.']],
+['db','How do you stop SVT in LGL?','Vagal maneuvers or adenosine','AV nodal blockers are generally safer in LGL than in WPW. [ECG IC s58]',['Procainamide or amiodarone','That\'s for WPW.'],['Defibrillation','LGL SVT isn\'t a pulseless rhythm.'],['Isoproterenol','That speeds the heart up.']],
+['db','PSVT with WPW and WIDE complexes: how do you treat it?','Treat it as V-tach','[Lec 9 s13]',['Treat it as sinus tach','Wide complexes + WPW are treated as VT.'],['Give adenosine','Avoid AV nodal blockers in WPW.'],['No treatment','It can degrade to V-fib.']],
+['db','What is the treatment for a bundle branch block?','None acutely, unless unstable or progressing to complete block; then consider temporary pacing','[ECG IC s54]',['Atropine for every BBB','Not on the slide.'],['Lidocaine','Not for BBB.'],['Immediate permanent pacemaker','Only if unstable or progressing.']],
+
+['dm','What is the nitroglycerin dose for MI?','0.4 mg SL every 5 min for 3 doses, then IV','[Lec 8 s10]',['2-4 mg IV','That\'s morphine.'],['162-325 mg','That\'s aspirin.'],['1 mg every 3-5 minutes','That\'s epinephrine in arrest.']],
+['dm','Which of these is a condition for giving nitroglycerin in MI?','SBP over 90 and not more than 30 below baseline, with HR 50-100','Also: no suspected RV infarct and no PDE inhibitor in 24 hr (48 for tadalafil). [Lec 8 s10]',['SBP over 70','The cutoff is 90.'],['HR over 100','HR must be between 50 and 100.'],['A suspected RV infarction','RV infarction is a reason NOT to give it.']],
+['dm','How long after tadalafil must you wait before giving nitro?','48 hours','24 hours for other PDE inhibitors. [Lec 8 s10]',['24 hours','That\'s for other PDE inhibitors, not tadalafil.'],['12 hours','Too short.'],['72 hours','Not on the slide.']],
+['dm','What is the morphine regimen for MI?','2-4 mg IV, then 2-8 mg IV every 5-15 min','[Lec 8 s11]',['0.4 mg SL','That\'s nitroglycerin.'],['1 mg/kg','Not a morphine dose here.'],['162-325 mg','That\'s aspirin.']],
+['dm','What is the aspirin dose for MI?','162-325 mg (Lec 8); 162-324 mg chewed (ECG IC)','[Lec 8 s11; ECG IC s64]',['81 mg','Not the dose on the slides.'],['650 mg','Too high per the slides.'],['0.4 mg','That\'s nitroglycerin.']],
+['dm','When is a beta blocker especially indicated in an MI?','With tachycardia or hypertension','[Lec 8 s11]',['With bradycardia','A beta blocker would slow the heart even more.'],['With hypotension','Beta blockers lower BP further.'],['Only in RV infarction','Not what the slide says.']],
+['dm','What does MONA stand for?','Morphine, Oxygen, Nitrates, Aspirin','[ECG IC s64]',['Metoprolol, Oxygen, Nitro, Atropine','M is morphine and A is aspirin.'],['Magnesium, Oxygen, Nitro, Adenosine','M is morphine and A is aspirin.'],['Morphine, Oxygen, Norepinephrine, Aspirin','N is nitrates.']],
+['dm','Which drugs are antiplatelets on the MI slide?','Clopidogrel, ticagrelor, prasugrel (plus aspirin)','Heparin is the anticoagulant. [ECG IC s64]',['Heparin','Heparin is an anticoagulant, not an antiplatelet.'],['tPA','tPA is a fibrinolytic.'],['Nitroglycerin','Nitro is a vasodilator.']],
+['dm','What caution comes with fibrinolytics / thrombolytics (tPA) in MI?','Risk of a brain bleed','[Lec 8 s11]',['They cause bradycardia','Not the risk named on the slide.'],['They prolong the QT','Not on the slide.'],['They can\'t be used in STEMI','They\'re listed as MI treatment.']],
+['dm','What is the goal time for primary PCI in STEMI?','Within 90 minutes of first medical contact','[ECG IC s64]',['30 minutes','Not the goal on the slide.'],['3 hours','Too long.'],['24 hours','Far too long.']],
+['dm','What treatments are listed for acute pulmonary embolism?','Thrombolytics, anticoagulants, pulmonary thrombectomy','[Lec 9 s36]',['Nitro and morphine','That\'s MI.'],['Atropine and pacing','That\'s bradycardia and blocks.'],['Adenosine','That\'s PSVT.']],
+
+['dc','Which drug class is a cause of sinus bradycardia?','Beta blockers','Opioids and anesthetic agents can also worsen it. [Lec 4 s24; ECG IC s5]',['Caffeine','Caffeine causes sinus TACHycardia.'],['Amphetamines','A stimulant, so it speeds the heart.'],['Atropine','Atropine treats bradycardia.']],
+['dc','What is the most common cause of ectopic rhythms?','Digitalis (digoxin) toxicity','[Lec 5 s5]',['Caffeine','Not the most common cause per the slide.'],['Hypothermia','Not the most common cause per the slide.'],['Beta blockers','Not the most common cause per the slide.']],
+['dc','At therapeutic levels, what does digoxin do to the EKG?','Scooped ST depression with a flat or inverted T','The "digitalis effect." [Lec 9 s29]',['Peaked T waves','That\'s hyperkalemia.'],['Osborn (J) waves','That\'s hypothermia.'],['Short QT','That\'s hypercalcemia.']],
+['dc','What is the most common arrhythmia from digoxin toxicity?','PAT with second-degree AV block','Toxicity can also cause sinus exit block and AV nodal block. [Lec 9 s29]',['V-fib','Not the most common on the slide.'],['WPW','WPW is an accessory pathway, not drug-caused.'],['Atrial flutter','Not listed.']],
+['dc','Which drug is on Lecture 9\'s QT-prolonging list?','Sotalol','The list: sotalol, fluconazole, amiodarone, tricyclics, phenothiazines, "-mycins," fluoroquinolones. [Lec 9 s30]',['Magnesium','Magnesium TREATS torsades.'],['Isoproterenol','Isoproterenol shortens the QT.'],['Atropine','Not on the list.']],
+['dc','Which antiarrhythmic is named in both Lecture 2 and Lecture 9 as prolonging the QT?','Amiodarone','[Lec 2; Lec 9 s30]',['Lidocaine','Not named as prolonging the QT.'],['Adenosine','Not named as prolonging the QT.'],['Esmolol','Not named as prolonging the QT.']],
+['dc','Which drugs does Lecture 6 list as causes of torsades?','Antiarrhythmics, tricyclic antidepressants, phenothiazines, antihistamines given with erythromycin','[Lec 6 s26]',['Magnesium and potassium','Low Mg and K cause it; giving them treats it.'],['Beta blockers and CCBs','Those worsen AV blocks, not listed for torsades.'],['Atropine and glycopyrrolate','Not listed.']],
+['dc','In a hypothermic patient, which drugs last longer than usual?','Sedatives, analgesics, neuromuscular blockers','Hypothermic patients metabolize drugs slowly. [ECG IC s60]',['Only antibiotics','Not what the slide says.'],['None; doses are unchanged','The slide says effects are prolonged.'],['Only local anesthetics','Not what the slide says.']],
+['dc','What drug classes blunt contractility in hypertrophic cardiomyopathy (HCM)?','Beta blockers or calcium channel blockers','[ECG IC s17]',['Vasodilators','Vasodilators lower afterload, which WORSENS the outflow obstruction.'],['Inotropes','More contractility worsens the obstruction.'],['Atropine','Tachycardia worsens HCM.']],
+
+['ph','What does the sympathetic nervous system increase?','Heart rate, contractility and conduction speed (chronotropy, inotropy, dromotropy)','[Lec 1.2 s9]',['Only heart rate','It also increases contractility and conduction speed.'],['It decreases heart rate','That\'s the parasympathetic system.'],['Vagal tone','The vagus is parasympathetic.']],
+['ph','The parasympathetic system slows the heart mainly through which nerve?','Vagus nerve','[Lec 1.2 s9]',['Phrenic nerve','The phrenic nerve runs the diaphragm.'],['Sympathetic chain','That speeds the heart up.'],['Recurrent laryngeal nerve','Not the one named.']],
+['ph','What is the Frank-Starling law?','More filling stretches the fibers, so stroke volume increases','[Lec 1.2 s11]',['More afterload increases stroke volume','The law is about preload (filling), not afterload.'],['Heart rate rises with temperature','That\'s a separate point on the regulation slide.'],['Stroke volume falls with more filling','It rises, up to a point.']],
+['ph','Where are the baroreceptors?','Carotid sinus and aortic arch','They sense BP. Chemoreceptors sense pH, CO2 and O2. [Lec 1.2 s10]',['SA and AV node','Those are pacemaker tissue.'],['Pulmonary veins','Not on the slide.'],['Medulla only','The slide names the carotid sinus and aortic arch.']],
+['ph','Pulmonary circulation runs at roughly what pressure?','About 25/10 mmHg, low resistance','Systemic is about 120/80, high resistance. [Lec 1.2 s13]',['About 120/80','That\'s systemic circulation.'],['About 60/40','Not on the slide.'],['About 200/100','Not on the slide.']],
+['ph','Which cells are the heart\'s "hard wiring"?','Electrical conducting cells','Pacemaker cells = the power source; myocardial cells = the contractile machinery. [Lec 1.2 s22]',['Pacemaker cells','Those are the electrical power source.'],['Myocardial cells','Those are the contractile machinery.'],['Endothelial cells','Not one of the three types on the slide.']],
+['ph','What happens in action potential phase 0?','Rapid depolarization: Na+ flows in','[Lec 1.2 s26]',['Ca2+ influx (plateau)','That\'s phase 2.'],['K+ efflux (repolarization)','That\'s phase 3.'],['Resting potential','That\'s phase 4.']],
+['ph','What happens in action potential phase 2?','Plateau: Ca2+ flows in','[Lec 1.2 s26]',['Na+ influx','That\'s phase 0.'],['K+ efflux','That\'s phase 3.'],['Overshoot','That\'s phase 1.']],
+['ph','What happens in action potential phase 3?','Repolarization: K+ flows out','[Lec 1.2 s26]',['Ca2+ influx','That\'s phase 2.'],['Na+ influx','That\'s phase 0.'],['Resting potential','That\'s phase 4.']],
+['ph','Why don\'t pacemaker cells have a true resting potential?','They slowly drift up (the "funny" Na+ leak current) until they hit threshold','[Lec 1.2 s20, s26 notes]',['They\'re always fully depolarized','They cycle; they aren\'t stuck depolarized.'],['They have no ion channels','They have channels, just fewer fast K+ channels.'],['They only fire when the vagus tells them to','They fire spontaneously.']],
+['ph','What is the order of the conduction system?','SA node, AV node, bundle of His, bundle branches, Purkinje fibers','The SA node fires at 60-100 bpm. [Lec 1.2 s29]',['AV node, SA node, His, Purkinje, bundle branches','The SA node starts it, and the bundle branches come before Purkinje.'],['SA node, His, AV node, Purkinje, bundle branches','The AV node comes before the His bundle.'],['SA node, Purkinje, AV node, His, bundle branches','Purkinje fibers come last.']],
+
+['eb','A wave of depolarization moving TOWARD the + electrode makes what kind of deflection?','Positive','Repolarization toward the + electrode makes a NEGATIVE deflection. [Lec 1.2 s38-42]',['Negative','That\'s depolarization moving AWAY, or repolarization moving toward it.'],['No deflection','Only a fully depolarized or repolarized cell gives baseline.'],['Biphasic always','Not the rule on the slide.']],
+['eb','One small box on EKG paper equals what?','0.04 s and 0.1 mV (1 mm)','A big box (5 mm) = 0.20 s. [Lec 2]',['0.20 s','That\'s a big box.'],['0.4 s','Ten times too long.'],['1 mV','10 small boxes tall = 1 mV.']],
+['eb','One big box on EKG paper equals how much time?','0.20 s','[Lec 2]',['0.04 s','That\'s a small box.'],['1 second','That\'s 5 big boxes.'],['0.12 s','That\'s 3 small boxes.']],
+['eb','The PR segment represents what?','The pause at the AV node','Conduction there is slow, carried by Ca2+ channels. [Lec 2]',['Ventricular depolarization','That\'s the QRS.'],['Atrial repolarization','That\'s hidden in the QRS.'],['Ventricular repolarization','That\'s the T wave.']],
+['eb','Where is atrial repolarization on the EKG?','Hidden inside the QRS','[Lec 2]',['The T wave','The T is VENTRICULAR repolarization.'],['The U wave','Not what the lecture says.'],['The PR segment','That\'s the AV node pause.']],
+['eb','Why does most of the QRS reflect the left ventricle?','LV mass is about 3 times the RV','[Lec 2]',['The LV depolarizes first','The septum goes first; it\'s about mass.'],['The electrodes are all on the left','Not the reason given.'],['The RV doesn\'t depolarize','It does; it\'s just smaller.']],
+['eb','What is the normal PR interval?','0.12-0.20 s (3-5 small boxes)','[Lec 2]',['Under 0.12 s','That\'s the QRS limit, and a short PR suggests pre-excitation.'],['0.20-0.40 s','Over 0.20 s is first-degree block.'],['About 0.42 s','That\'s about the QT.']],
+['eb','What is a normal QRS width?','0.06-0.08 s, under 0.12 s','[Lec 2]',['0.12-0.20 s','That\'s the PR interval.'],['Over 0.12 s','Wide; think BBB or ventricular origin.'],['About 0.36 s','That\'s about the QT.']],
+['eb','What is the normal P wave height in lead II?','Under 2.5 mm','Over 2.5 mm in the inferior leads = right atrial enlargement. [Lec 2; Lec 3 s17]',['Under 5 mm','Too high.'],['Over 2.5 mm','That\'s RAE.'],['Exactly 1 mm','Not the limit.']],
+['eb','How tall should a normal T wave be compared with its R?','1/3 to 2/3 of the R','[Lec 2]',['Taller than the R','Too tall; think hyperkalemia.'],['Under 1/10 of the R','Too flat; think hypokalemia.'],['Always exactly half','The slide gives a range.']],
+['eb','What is the rule of thumb for a normal QT?','Less than half the R-R interval (about 0.42 s or less)','[Lec 2]',['More than the whole R-R','Way too long.'],['Equal to the PR','Not a rule on the slide.'],['Under 0.12 s','That\'s the QRS.']],
+['eb','Which is a cause of a prolonged QT in Lecture 2?','Hypocalcemia','The list: MI, myocarditis, SAH, amiodarone, hypocalcemia, hypothyroidism. [Lec 2]',['Hypercalcemia','High calcium SHORTENS the QT [Lec 9 s26].'],['Hyperthyroidism','The slide says HYPOthyroidism.'],['Hyperkalemia','Hyperkalemia peaks the T wave.']],
+['eb','What is a Q wave?','The first downward deflection before an upward one (septal depolarization)','R = first upward; R\' = a second upward; S = downward after the R. [Lec 2]',['The first upward deflection','That\'s the R wave.'],['Any downward deflection after the R','That\'s the S wave.'],['A second upward deflection','That\'s R prime.']],
+['eb','Lead II runs between which electrodes?','Right arm (-) to left leg (+)','I = RA to LA; III = LA to LL. [Lec 2]',['Right arm to left arm','That\'s lead I.'],['Left arm to left leg','That\'s lead III.'],['Left leg to right arm (+)','The + electrode is the left leg.']],
+['eb','Where are V1 and V2 placed?','4th intercostal space on either side of the sternum','V5-V6 go along the left axillary lines. [Lec 1.2 s57-59]',['5th ICS, left axillary line','That\'s V5-V6.'],['2nd ICS, midclavicular','Not on the slide.'],['Over the septum, 5th ICS','The slide places V3-V4 there.']],
+['eb','Which leads are the inferior leads?','II, III, aVF','[Lec 2; Lec 8 s42]',['I, aVL, V5, V6','Those are lateral.'],['V1-V4','Those are anterior/septal.'],['aVR','aVR looks at nothing in particular.']],
+['eb','Which leads are the lateral leads?','I, aVL, V5, V6','[Lec 2; Lec 8 s41]',['II, III, aVF','Those are inferior.'],['V1, V2','Those are septal/anterior.'],['aVR, V1','Not lateral.']],
+['eb','Who introduced the augmented leads (aVR, aVL, aVF)?','Goldberger','Einthoven built the string galvanometer and set leads I, II, III. [Lec 1.2 s5, s49]',['Einthoven','Einthoven did the limb leads and the triangle.'],['Wenckebach','He described a type of AV block.'],['Wolff','WPW, not leads.']],
+
+['rr','R waves are 3 big boxes apart. What is the rate?','100 bpm','Sequence: 300, 150, 100, 75, 60, 50. [Lec 4 s9]',['150 bpm','That\'s 2 big boxes.'],['75 bpm','That\'s 4 big boxes.'],['60 bpm','That\'s 5 big boxes.']],
+['rr','R waves are 5 big boxes apart. What is the rate?','60 bpm','[Lec 4 s9]',['50 bpm','That\'s 6 big boxes.'],['75 bpm','That\'s 4 big boxes.'],['100 bpm','That\'s 3 big boxes.']],
+['rr','What is the junction\'s (AV node\'s) intrinsic rate?','40-60 bpm','[Lec 4 s31; Lec 5 s3]',['60-100 bpm','That\'s the SA node.'],['20-40 bpm','That\'s the ventricle (Lecture 4).'],['60-80 bpm','That\'s the atria (Lecture 4).']],
+['rr','What is the ventricle\'s intrinsic rate?','20-40 bpm (Lec 4) or 30-45 bpm (Lec 5)','The lectures differ slightly. [Lec 4 s31; Lec 5 s3]',['40-60 bpm','That\'s the junction.'],['60-100 bpm','That\'s the SA node.'],['100-150 bpm','That would be a tachycardia.']],
+['rr','There are no P waves. Where did the rhythm start?','Below the atria: AV node or ventricle','[Lec 5 s8]',['In the SA node','A sinus rhythm has normal P waves.'],['In the atria','Atrial rhythms still make P waves.'],['You can\'t tell anything','Missing Ps tells you it\'s below the atria.']],
+['rr','A wide QRS usually means what?','A focus in the ventricles','Narrow = at or above the AV node (supraventricular). [Lec 5 s10; Lec 6 s29]',['A focus at or above the AV node','That\'s a narrow QRS.'],['A normal sinus beat','Sinus beats are narrow.'],['Atrial enlargement','That changes the P wave.']],
+['rr','A 1:1 P:QRS ratio with a P before each QRS suggests what origin?','Atrial','[Lec 5 s11]',['Ventricular','Ventricular rhythms don\'t have a P before each QRS.'],['Junctional','Junctional beats have no P or an inverted one.'],['Reentry in the ventricle','Not what the slide says.']],
+['rr','What are the four questions for working out an ectopic rhythm?','Normal P waves? Narrow or wide QRS? P:QRS relationship? Regular or irregular?','[Lec 5 s8-12]',['Rate, axis, QT, U waves','Not the four on the slide.'],['Age, weight, history, drugs','Not the four on the slide.'],['P, Q, R, S heights','Not the four on the slide.']],
+['rr','What are the criteria for normal sinus rhythm?','Every P followed by a QRS, rate 60-100, normal P, PR and QRS','[Lec 2]',['Rate 40-60 with no P','That\'s junctional.'],['Irregularly irregular','That\'s A-fib.'],['Rate over 100','That\'s sinus tach.']],
+
+['ac','In HIS DEBS, what does the H stand for?','Hypoxia','H Hypoxia, I Ischemia/irritability, S Sympathetic, D Drugs, E Electrolytes, B Bradycardia, S Stretch. [Lec 4 s4-6]',['Hypertension','Not the H.'],['Hypothermia','Not the H.'],['Heart failure','Not the H.']],
+['ac','In HIS DEBS, what does the final S stand for?','Stretch (hypertrophy, valve problems)','[Lec 4 s6]',['Sympathetic stimulation','That\'s the first S.'],['Sepsis','Not in HIS DEBS.'],['Sleep','Not in HIS DEBS.']],
+['ac','What is a Holter monitor?','A portable ECG worn for 24-48 hours','An event monitor is triggered by the patient during symptoms. [Lec 4 s7]',['A monitor the patient triggers','That\'s an event monitor.'],['A 12-lead in the ER','Not a Holter.'],['An implanted pacemaker','Not a Holter.']],
+['ac','What is the difference between enhanced automaticity and reentry?','Automaticity = a focus fires faster (impulse FORMATION). Reentry = an impulse keeps looping (impulse TRANSMISSION).','[Lec 5 s6-7]',['They\'re the same thing','The slides separate them.'],['Automaticity = transmission, reentry = formation','Flipped.'],['Both are conduction blocks','Blocks are a separate type.']],
+['ac','What is the difference between sinus arrest and sinus exit block?','Arrest: the SA node goes silent and restarts at random. Exit block: it keeps firing, but the impulse can\'t get out.','[Lec 5 s4]',['Arrest: impulse can\'t exit. Exit block: node silent.','Flipped.'],['There\'s no difference','The slide compares them.'],['Exit block is ventricular','Both are SA node problems.']],
+['ac','Which of these is a cause of sinus TACHYcardia?','Pheochromocytoma','Also pain, anxiety, exercise, hyperthyroid, anemia, hypovolemia, malignant hyperthermia, sepsis, drugs, caffeine. [Lec 4 s20]',['Hypothyroidism','That causes BRADYcardia.'],['Beta blockers','Those cause bradycardia.'],['Sleep','That causes bradycardia.']],
+['ac','Which of these is a cause of sinus BRADYcardia?','Athleticism','Also vagal maneuvers, sleep, severe hypertension, beta blockers, hypothyroid. [Lec 4 s24]',['Anemia','That causes tachycardia.'],['Sepsis','That causes tachycardia.'],['Hyperthyroidism','That causes tachycardia.']],
+['ac','What causes sinus arrhythmia?','Spontaneous breathing','[Lec 4 s28]',['Digoxin toxicity','Not the cause listed.'],['MI','Not the cause listed.'],['Hyperkalemia','Not the cause listed.']],
+['ac','What is the difference between AVNRT and AVRT?','AVNRT: dual pathways in the AV node. AVRT: an accessory pathway (like WPW).','[ECG IC s26]',['AVNRT is ventricular','Both are supraventricular.'],['AVRT uses dual AV node pathways','Flipped.'],['They\'re types of heart block','They\'re types of PSVT.']],
+['ac','What usually triggers PSVT?','A PAC or PJC','It can occur in a perfectly normal heart. [Lec 5 s17]',['A PVC','Not the trigger on the slide.'],['Only an MI','It can happen in normal hearts.'],['Sinus arrest','Not the trigger listed.']],
+['ac','Which is an underlying cause of A-fib in Lecture 5?','Mitral valve disease','Also long-standing HTN, CAD, hyperthyroidism, PE, pericarditis. [Lec 5 s24]',['Hypothyroidism','The slide says HYPERthyroidism.'],['Athleticism','That causes sinus brady.'],['Sleep','Not listed.']],
+['ac','MAT is usually seen with what?','Severe lung disease','[Lec 5 s28]',['WPW','Not the link given.'],['Hyperkalemia','Not the link given.'],['Athletes','Not the link given.']],
+['ac','What is AIVR?','A benign rhythm seen during acute infarction, rate about 50-100','[Lec 6 s24]',['A deadly rhythm needing immediate shock','The slide calls it benign.'],['A rhythm from the SA node','It\'s ventricular.'],['The same as V-fib','No.']],
+['ac','Which is TRUE of V-tach compared with PSVT?','VT doesn\'t respond to carotid massage and may show cannon A waves and fusion beats','PSVT may stop with carotid massage and shows none of those. [Lec 6 s30]',['VT stops with carotid massage','That\'s PSVT.'],['PSVT shows cannon A waves','Cannon A waves point to VT.'],['PSVT shows fusion beats','Fusion beats point to VT.']],
+['ac','Which has a compensatory pause, a PAC or a PVC?','A PVC','A PAC\'s QRS looks more normal and is usually narrow. [Lec 6 s31]',['A PAC','PACs don\'t have a full compensatory pause.'],['Both equally','The slide gives it to PVCs.'],['Neither','PVCs do.']],
+
+['cb','What are the three types of conduction blockade?','Sinus node block, AV node block, bundle branch block','[Lec 7 s2]',['1st, 2nd and 3rd degree','Those are the AV blocks, one of the three types.'],['RBBB, LBBB, hemiblock','Those are bundle branch types.'],['Arrest, exit block, asystole','Not the three.']],
+['cb','Where does Wenckebach (Mobitz I) happen?','Inside the AV node','Mobitz II happens in the bundle of His, below the AV node. [Lec 7 s6, s8]',['The bundle of His','That\'s Mobitz II.'],['The bundle branches','That\'s a BBB.'],['The SA node','That\'s a sinus node block.']],
+['cb','Where does Mobitz II happen?','The bundle of His, below the AV node (all-or-nothing)','[Lec 7 s8]',['Inside the AV node','That\'s Wenckebach.'],['The SA node','That\'s a sinus node block.'],['The Purkinje fibers','Not what the slide says.']],
+['cb','In third-degree block, what is the ventricular escape rate?','30-45 bpm','The P waves run at 60-100. [Lec 7 s12]',['60-100 bpm','That\'s the P wave rate.'],['100-150 bpm','Too fast.'],['Exactly 72','No.']],
+['cb','How many fascicles does the left bundle have?','Three','A hemiblock slows just one of them. [Lec 7 s22]',['One','The slide says three.'],['Two','The slide says three.'],['Four','The slide says three.']],
+['cb','Which hemiblock causes LEFT axis deviation?','Left anterior hemiblock','Left posterior gives right axis deviation. [Lec 7 s23, s26]',['Left posterior hemiblock','That gives RIGHT axis deviation.'],['RBBB alone','RBBB doesn\'t cause LAD by itself.'],['First-degree block','No axis change.']],
+['cb','Which hemiblock causes RIGHT axis deviation?','Left posterior hemiblock','[Lec 7 s26]',['Left anterior hemiblock','That gives LEFT axis deviation.'],['LBBB','Not the answer on the slide.'],['Mobitz II','No axis change.']],
+['cb','What is the most common bifascicular block?','RBBB plus left anterior hemiblock','Only one of the three fascicles is still conducting. [Lec 7 s29]',['LBBB plus RBBB','That would be complete block.'],['RBBB plus first-degree block','Not a bifascicular block.'],['Left posterior plus left anterior','Not the most common.']],
+['cb','Which electrolyte problem causes bradycardia and AV block?','Hyperkalemia','Low K or Mg leads to ventricular arrhythmias. [ECG IC s46]',['Hypokalemia','That causes ventricular arrhythmias.'],['Hypercalcemia','Not the one named.'],['Hyponatremia','Not the one named.']],
+['cb','Which valve disease can lead to LBBB or complete heart block?','Aortic stenosis','Especially after surgery. [ECG IC s46]',['Mitral regurgitation','Not the one named.'],['Tricuspid regurgitation','Not the one named.'],['Pulmonary stenosis','That\'s linked to RVH.']],
+
+['ax','What is the difference between enlargement and hypertrophy?','Enlargement = dilation from volume overload. Hypertrophy = more muscle from pressure overload.','Enlargement: aortic insufficiency, mitral regurgitation. Hypertrophy: hypertension, aortic stenosis. [Lec 3 s2]',['Enlargement = more muscle','That\'s hypertrophy.'],['Hypertrophy = volume overload','Hypertrophy is from PRESSURE overload.'],['They\'re the same','The slide defines them separately.']],
+['ax','Lead I is positive and aVF is negative. What is the axis?','Left axis deviation (0 to -90 degrees)','[Lec 3 s12-13]',['Right axis deviation','RAD is I negative, aVF positive.'],['Normal axis','Normal is I and aVF both positive.'],['Extreme axis','Not one of the three on the slide.']],
+['ax','What is the range for right axis deviation?','+90 to 180 degrees','Normal 0 to +90; LAD 0 to -90. [Lec 3 s7-12]',['0 to +90','That\'s normal.'],['0 to -90','That\'s LAD.'],['-90 to -180','Not the slide\'s RAD range.']],
+['ax','Which two leads show almost everything about atrial enlargement?','Lead II and V1','[Lec 3 s15]',['I and aVF','Those are the axis leads.'],['V5 and V6','Those matter for LVH.'],['aVR and aVL','Not the ones named.']],
+['ax','What is the criterion for right atrial enlargement?','P waves over 2.5 mm in II, III, aVF (P pulmonale)','Width doesn\'t change. [Lec 3 s16-17]',['A wide, notched P (P mitrale)','That\'s LAE.'],['A deep negative end of the P in V1','That\'s LAE.'],['A short PR','That\'s pre-excitation.']],
+['ax','What is the V1 criterion for left atrial enlargement?','The end of the P drops at least 1 mm below baseline and lasts at least 0.04 s','[Lec 3 s20]',['P over 2.5 mm in II','That\'s RAE.'],['R bigger than S in V1','That\'s RVH.'],['No P wave','That\'s junctional or A-fib.']],
+['ax','What V1 finding suggests RVH?','R wave bigger than the S wave','In V6 the S is bigger than the R. [Lec 3 s27]',['A deep S in V1 over 35 mm with R in V5','That\'s LVH.'],['rSR\' rabbit ears','That\'s RBBB.'],['Delta wave','That\'s WPW.']],
+['ax','What is the main precordial LVH criterion?','R in V5 or V6 plus S in V1 or V2 over 35 mm','Also R in V5 over 26 mm, R in V6 over 18 mm. [Lec 3 s32]',['R in aVL over 13 mm','A limb-lead criterion, "not very useful."'],['R bigger than S in V1','That\'s RVH.'],['QRS over 0.12 s','That\'s a BBB.']],
+['ax','Which is a cause of LVH?','Athleticism','Also hypertension, aortic stenosis, hypertrophic cardiomyopathy. [Lec 3 s29]',['Tetralogy of Fallot','That\'s RVH.'],['Pulmonary hypertension','That\'s RVH.'],['COPD','That\'s RAE / RVH.']],
+['ax','Which is a cause of RVH?','Tetralogy of Fallot','Also pulmonary hypertension, pulmonary valve stenosis, VSD, lung disease. [Lec 3 s25]',['Aortic stenosis','That\'s LVH.'],['Systemic hypertension','That\'s LVH.'],['Athleticism','That\'s LVH.']],
+
+['mi','What is unstable angina?','Chest pain with little or no exertion that doesn\'t go away; heading toward MI','Stable angina = pain on exertion that resolves at rest. [Lec 8 s2]',['Pain on exertion that resolves with rest','That\'s stable angina.'],['A healed MI','Not angina.'],['Pain only during sleep','Not the definition.']],
+['mi','When does troponin rise, peak, and clear?','Rises 3-6 hr, peaks 12-24 hr, stays up to 10-14 days','Most sensitive and specific. [Lec 8 s7]',['Rises 1-2 hr','That\'s myoglobin.'],['Peaks at 18 hr, clears in 48-72 hr','That\'s CK-MB.'],['Never rises in MI','It\'s the key MI marker.']],
+['mi','Which marker rises fastest but is non-specific?','Myoglobin (1-2 hr)','[Lec 8 s7]',['Troponin','Troponin rises at 3-6 hr and is the MOST specific.'],['CK-MB','CK-MB rises at 3-6 hr.'],['C-reactive protein','A risk factor, not an injury marker on this slide.']],
+['mi','What is CK-MB especially useful for?','Spotting a reinfarction, or tracking an infarct as it resolves','Back to normal in 48-72 hr. [Lec 8 s7]',['It\'s the most specific marker','Troponin is more specific.'],['It rises first','Myoglobin rises first.'],['Diagnosing PE','Not on the slide.']],
+['mi','In what order does the EKG change during an acute MI?','T waves peak then invert, ST elevation, then new Q waves','[Lec 8 s9, s36]',['Q waves first, then T changes','Q waves come last; they mean infarction.'],['ST depression, then U waves','That\'s more like hypokalemia.'],['No EKG changes occur','There are three stages.']],
+['mi','Persistent ST elevation after an MI suggests what?','A ventricular aneurysm','ST elevation usually returns to baseline within hours. [Lec 8 s22]',['A healed infarct','Normally the ST returns to baseline.'],['Hypokalemia','That depresses the ST.'],['Normal variant','Not after an MI.']],
+['mi','In the INVERSION mnemonic, what does E stand for?','Embolism (right heart strain)','[Lec 8 s13]',['Electrolytes','Not in the mnemonic.'],['Exercise','Not in the mnemonic.'],['Epinephrine','Not in the mnemonic.']],
+['mi','In the INVERSION mnemonic, what does I (the second I) stand for?','Iatrogenic (digoxin)','The first I is incorrect lead placement. [Lec 8 s13]',['Incorrect lead placement','That\'s the FIRST I.'],['Infection','Not in the mnemonic.'],['Ischemia','Not a letter here.']],
+['mi','In which lead is the T wave normally inverted?','aVR','Sometimes also V1 and III. [Lec 8 s14]',['II','T should be upright in II.'],['V5','T should be upright in V5.'],['I','T should be upright in I.']],
+['mi','Which inverted T is more likely to be pathologic?','A symmetric one','Normal Ts rise slowly and fall fast; deeper than 2-3 mm is also concerning. [Lec 8 s16-17]',['An asymmetric one','Asymmetry is normal.'],['One only in aVR','aVR is normally inverted.'],['A shallow one under 1 mm','Depth over 2-3 mm is the concern.']],
+['mi','What do you measure ST elevation against?','The TP segment','[Lec 8 s22]',['The PR segment','The slide says TP is the better reference.'],['The peak of the T','No.'],['The R wave','No.']],
+['mi','How do you tell MI ST elevation from J-point elevation?','In MI the ST bows upward and merges with the T; in J-point elevation the T keeps its own shape','[Lec 8 s25]',['J-point elevation always means MI','J-point elevation is very common (early repolarization).'],['They look identical','The slide gives the difference.'],['MI ST is concave and separate from the T','Flipped.']],
+['mi','What makes a Q wave pathologic?','Over 0.04 s wide and at least 1/3 of the R\'s height (slide 35 says 25%)','[Lec 8 s31, s35]',['Any Q in lead III alone','That\'s a normal variant.'],['Small narrow Qs in I, aVL, V5, V6','Those are normal (septal).'],['Over 0.12 s wide only','The cutoff is 0.04 s.']],
+['mi','Which artery is usually behind an inferior MI?','RCA (leads II, III, aVF)','[Lec 8 s39, s44]',['LAD','LAD = anterior.'],['Circumflex','Circumflex = lateral.'],['Left main','Left main = lateral.']],
+['mi','A lateral MI (I, aVL, V5, V6) is usually which artery?','Circumflex (or left main)','[Lec 8 s39, s46]',['RCA','RCA = inferior, posterior, RV.'],['LAD only','LAD = anterior.'],['Pulmonary artery','Not a coronary.']],
+['mi','Which leads show an anterior MI?','V2, V3, V4 (LAD)','Anteroseptal = V1-V4. [Lec 8 s43]',['II, III, aVF','That\'s inferior.'],['I, aVL, V5, V6','That\'s lateral.'],['Right-sided V4-V6','That\'s RV.']],
+['mi','How does a posterior MI show up?','ST depression and tall R waves in the anterior leads, especially V1 (a mirror image)','[Lec 8 s53]',['ST elevation in II, III, aVF','That\'s inferior.'],['Delta waves','That\'s WPW.'],['ST elevation in V5-V6','That\'s lateral.']],
+['mi','What do Wellens waves mean?','A proximal LAD occlusion (deep or biphasic T waves in V2-V3)','[Lec 8 s52]',['A normal variant','The slide treats them as serious.'],['Inferior MI','They\'re anterior (V2-V3).'],['Hyperkalemia','Not peaked Ts.']],
+['mi','What are de Winter T waves?','Upsloping ST depression into tall, symmetric T waves in the precordial leads, as serious as ST elevation','[Lec 8 s51]',['Deep inverted T in V2-V3','That\'s Wellens.'],['A U wave after the T','That\'s hypokalemia.'],['Osborn waves','That\'s hypothermia.']],
+['mi','What does an RV infarct look like?','Like an inferior MI, plus ST elevation in V1','V2 shows smaller ST elevation or ST depression. [Lec 8 s54]',['Like a lateral MI','Not what the slide says.'],['Only ST depression in V5','Not what the slide says.'],['Tall R waves in V1 only','That\'s posterior or RVH.']],
+['mi','How fast do inferior MI Q waves fade?','About 50% are gone within 6 months','[Lec 8 s44]',['They never fade','The slide says half fade within 6 months.'],['All are gone in a week','Too fast.'],['They fade only after CABG','Not on the slide.']],
+
+['oc','What is the accessory pathway in WPW?','The bundle of Kent','LGL uses the James fibers (inside the AV node). [Lec 9 s5, s15]',['James fibers','That\'s LGL.'],['Bundle of His','That\'s the normal pathway.'],['Purkinje fibers','Normal pathway.']],
+['oc','How common is pre-excitation?','Under 1% of people, mostly male','Can come with MVP, HOCM or congenital defects. [Lec 9 s4]',['About 20%, mostly female','Not what the slide says.'],['Everyone has it','No.'],['Only in the elderly','Not what the slide says.']],
+['oc','What share of WPW patients have at least one SVT?','50-70%','[Lec 9 s9]',['Under 5%','Too low.'],['100%','Not all; "in some" it causes few problems.'],['About 10%','Too low.']],
+['oc','Why is A-fib with WPW so dangerous?','Without the AV node to slow it, the ventricular rate can reach 300 bpm and set off V-fib','[Lec 9 s14]',['It always causes asystole','Not what the slide says.'],['It slows the rate to 30','It speeds it up.'],['It\'s harmless','The slide calls it devastating.']],
+['oc','What can\'t you assess in WPW?','Axis, amplitude, hypertrophy and BBB','The accessory pathway changes the current vectors. [Lec 9 s5]',['Heart rate','You can still count the rate.'],['Rhythm regularity','You can still judge that.'],['P waves','You can still see them.']],
+['oc','Beck\'s triad (pericarditis / tamponade) is what?','JVD, hypotension, muffled heart sounds','[Lec 9 s31]',['Hypertension, bradycardia, wide pulse pressure','That\'s Cushing\'s triad.'],['Low EtCO2, low BP, high HR','Those are PE signs.'],['Syncope, angina, dyspnea','That\'s IHSS.']],
+['oc','Cushing\'s triad (severe CVA / SAH) is what?','Hypertension, bradycardia, widened pulse pressure','[Lec 9 s37]',['JVD, hypotension, muffled heart sounds','That\'s Beck\'s triad.'],['Tachycardia, hypotension, fever','Not Cushing\'s.'],['Low EtCO2, low BP, high HR','Those are PE signs.']],
+['oc','What is the S1Q3 pattern, and what is it a sign of?','Large S in lead I, deep Q in lead III: acute PE','Also acute RVH, RBBB; clinically low EtCO2, low BP, high HR. [Lec 9 s35]',['A sign of inferior MI','Q waves in II, III AND aVF are inferior MI.'],['A sign of hypothermia','That\'s Osborn waves.'],['A sign of COPD','COPD = low voltage, RAD, RAE, RVH.']],
+['oc','In acute PE, which way does EtCO2 go?','Down','With low BP and high HR. [Lec 9 s35]',['Up','The slide shows it going down.'],['No change','The slide shows it going down.'],['It doubles','The slide shows it going down.']],
+['oc','What EKG changes does COPD cause?','Low voltage, right axis deviation, RAE and RVH','[Lec 9 s34]',['S1Q3','That\'s acute PE.'],['Saddle ST segments','That\'s myocarditis.'],['Delta waves','That\'s WPW.']],
+['oc','Diffuse T inversion with "saddle" ST segments suggests what?','Myocarditis','Causes: infection, transplant rejection, chemo, snake venom, CO, arsenic. [Lec 9 s33]',['Pericarditis','Pericarditis = ST elevation, T flattening or inversion, rub.'],['Athlete\'s heart','Athlete = brady, precordial STE, LVH, Wenckebach.'],['COPD','COPD = low voltage, RAD.']],
+['oc','Which is part of athlete\'s heart on the EKG?','Wenckebach','Also sinus brady, precordial ST elevation, LVH. [Lec 9 s38]',['Torsades','Not listed.'],['S1Q3','That\'s PE.'],['Delta waves','That\'s WPW.']],
+['oc','Below what core temperature does "everything slow" in hypothermia?','30 degrees C','Sinus brady, slow junctional, slow A-fib, J (Osborn) waves. [Lec 9 s28]',['37 degrees C','That\'s normal body temperature.'],['35 degrees C','Not the slide\'s number.'],['25 degrees C','Not the slide\'s number.']],
+['oc','How does calcium affect the QT?','Low Ca lengthens it (can start torsades); high Ca shortens it','[Lec 9 s26]',['Low Ca shortens it','Flipped.'],['Calcium has no effect','It mainly affects the QT.'],['High Ca causes peaked T','That\'s potassium.']],
+['oc','IHSS (hypertrophic subaortic stenosis) shows what on the EKG?','LVH, left axis deviation, possibly Q waves','Symptoms: syncope, angina, dyspnea on exertion. [Lec 9 s32]',['RVH and RAD','That\'s COPD or pulmonary disease.'],['Saddle ST','That\'s myocarditis.'],['S1Q3','That\'s PE.']],
+
+['an','In aortic stenosis, why must you avoid a big drop in SVR?','The stiff LV needs afterload to perfuse the coronaries; a big SVR drop means ischemia','Also keep preload up and avoid tachycardia and bradycardia. [ECG IC s15]',['Because SVR drops cause hypertension','A drop lowers BP.'],['It doesn\'t matter in AS','The slide stresses it.'],['Because AS needs fast heart rates','Tachycardia worsens AS.']],
+['an','How much cardiac output is lost with the atrial kick in A-fib?','20-30%','[ECG IC s24]',['About 5%','Too low.'],['About 50%','Too high.'],['None','The slide says 20-30%.']],
+['an','In MAT, what should you avoid during anesthesia?','Hypoxia and hypercarbia','They raise PVR and add ectopy. Keep K and Mg normal. [ECG IC s28]',['Oxygen','You want good oxygenation.'],['Normal potassium','Keep K normal.'],['Slow heart rate','Avoid TACHYcardia.']],
+['an','For RVH patients, what is the key goal?','Keep PVR low: avoid hypoxia, hypercarbia, acidosis, over-inflation and high PEEP','The RV is preload-dependent. [ECG IC s20-21]',['Raise PVR','That strains the RV and can cause failure.'],['Use high PEEP','High PEEP increases RV afterload.'],['Keep the patient dry','Both under- and over-filling are problems.']],
+['an','In HCM, which three things worsen the outflow obstruction?','Low preload, low afterload, high contractility (and tachycardia)','[ECG IC s17]',['High preload and slow HR','Those help.'],['Beta blockers','They\'re used to treat it.'],['Fluids','Fluids keep preload up, which helps.']],
+['an','Why does a junctional escape rhythm lower preload?','It loses the atrial kick','Rate 40-60. [ECG IC s9]',['It\'s too fast','It\'s 40-60.'],['It causes V-fib','Not the reason given.'],['It increases afterload','Not the reason given.']],
+['an','A ventricular escape rhythm runs at what rate, and what should be ready?','20-40 bpm; external pacing','[ECG IC s11]',['60-100; nothing','That\'s the SA node rate.'],['40-60; adenosine','40-60 is junctional, and adenosine isn\'t for this.'],['150; defibrillator','Too fast.']],
+['an','Why handle a severely hypothermic patient gently?','Rough handling can trigger V-fib','Also don\'t rewarm extremities fast (vasodilation and shock). [ECG IC s60]',['It causes hyperkalemia','Not the reason given.'],['It causes asystole','The slide says V-fib.'],['It doesn\'t matter','The slide stresses it.']],
+['an','What do patients with complete heart block often need before elective surgery?','A permanent pacemaker','Temporary pacing in emergencies. [ECG IC s53]',['Atropine only','Atropine is usually ineffective here.'],['Nothing special','The slide says they may need a pacemaker first.'],['Adenosine','That worsens AV block.']],
+['an','For an LVH patient, what kind of induction does ECG IC recommend?','Slow, smooth, deliberate, keeping HR controlled and preload/afterload stable','High ventilation pressures cut venous return. [ECG IC s18]',['Rapid, with a big drop in SVR','Avoid sudden afterload drops.'],['One that causes tachycardia','Avoid tachycardia.'],['Large volume overload','Overload = CHF.']],
+['an','Which drug effect is concerning with sinus bradycardia under anesthesia?','Opioids and anesthetic agents can worsen it; have pacing ready','[ECG IC s5]',['Atropine worsens it','Atropine treats it.'],['Epinephrine worsens it','Not on the slide.'],['Nothing affects it','The slide warns about opioids and anesthetics.']],
+];
+
+// ---------- state ----------
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ids=Q.map((q,i)=>i);
+const ST={mode:'all',topics:Object.keys(T),queue:[],pos:0,right:0,stats:{}};
+try{Object.assign(ST,JSON.parse(localStorage.getItem('ekgquiz')||'{}'))}catch(e){}
+ST.topics=ST.topics.filter(t=>T[t]);if(!ST.topics.length)ST.topics=Object.keys(T);
+const save=()=>{try{localStorage.setItem('ekgquiz',JSON.stringify(ST))}catch(e){}};
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const missedIds=()=>ids.filter(i=>(ST.stats[i]||{}).miss>0&&!(ST.stats[i]||{}).fixed);
+function pool(){
+  const inTopic=ids.filter(i=>ST.topics.includes(Q[i][0]));
+  return ST.mode==='missed'?inTopic.filter(i=>missedIds().includes(i)):inTopic;
+}
+function newRound(){ST.queue=shuffle(pool());ST.pos=0;ST.right=0;save();render()}
+let cur=null;
+
+// ---------- render ----------
+function renderStats(){
+  const seen=ids.filter(i=>ST.stats[i]).length, m=missedIds().length;
+  $('#stats').innerHTML=`<span>Seen <b>${seen}</b>/<b>${Q.length}</b></span><span>To review <b>${m}</b></span>`;
+  $('#missedSum').textContent=`Questions you've missed (${m})`;
+}
+function renderControls(){
+  const md=$('#modes');md.innerHTML='';
+  [['all',`Every question (${ids.filter(i=>ST.topics.includes(Q[i][0])).length})`],['missed',`Only ones I missed (${missedIds().filter(i=>ST.topics.includes(Q[i][0])).length})`]].forEach(([v,l])=>{
+    const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=l;b.setAttribute('aria-pressed',ST.mode===v);
+    b.onclick=()=>{ST.mode=v;newRound()};md.appendChild(b)});
+  const tp=$('#topics');tp.innerHTML='';
+  Object.entries(T).forEach(([k,l])=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=l;b.setAttribute('aria-pressed',ST.topics.includes(k));
+    b.onclick=()=>{if(ST.topics.includes(k)){if(ST.topics.length>1)ST.topics=ST.topics.filter(x=>x!==k)}else ST.topics.push(k);newRound()};tp.appendChild(b)});
+  const n=ST.queue.length, done=Math.min(ST.pos,n);
+  $('#barfill').style.width=n?(done/n*100)+'%':'0';
+  $('#progress').textContent=n?`Question ${Math.min(ST.pos+1,n)} of ${n} this round · ${ST.right} right so far`:'';
+}
+function render(){
+  renderStats();renderControls();renderMissed();
+  const card=$('#card');
+  if(!ST.queue.length){card.innerHTML=`<div class="done"><p class="q">${ST.mode==='missed'?'Nothing to review here.':'No questions in these topics.'}</p><p class="note">${ST.mode==='missed'?'You haven\'t missed any questions in the selected topics, or you\'ve fixed them all.':''}</p><button class="b primary" type="button" id="toAll">Go to every question</button></div>`;
+    $('#toAll').onclick=()=>{ST.mode='all';newRound()};return}
+  if(ST.pos>=ST.queue.length){
+    const n=ST.queue.length;
+    card.innerHTML=`<div class="done"><p class="verdict ok">Round done</p><p class="q">${ST.right} of ${n} right</p><p class="note">${missedIds().length} question${missedIds().length===1?'':'s'} waiting in your review list.</p><div class="row" style="justify-content:center"><button class="b primary" type="button" id="again">Start another round</button>${missedIds().length?'<button class="b ghost" type="button" id="review">Review my missed questions</button>':''}</div></div>`;
+    $('#again').onclick=newRound;const r=$('#review');if(r)r.onclick=()=>{ST.mode='missed';newRound()};return}
+  const qi=ST.queue[ST.pos],q=Q[qi];
+  const opts=shuffle([{t:q[2],ok:true},...q.slice(4).map(w=>({t:w[0],why:w[1]}))]);
+  cur={qi,opts,answered:false};
+  card.innerHTML=`<div class="qmeta"><span>${esc(T[q[0]])}</span><span>${ST.mode==='missed'?'Review':''}</span></div>
+    <p class="q">${esc(q[1])}</p>
+    <div class="opts">${opts.map((o,i)=>`<button class="opt" type="button" data-i="${i}"><span class="k">${'ABCD'[i]}</span><span>${esc(o.t)}</span></button>`).join('')}</div>
+    <div class="fb" id="fb" hidden></div>`;
+  card.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.i));
+}
+function answer(i){
+  if(cur.answered)return;cur.answered=true;
+  const q=Q[cur.qi],o=cur.opts[i],s=ST.stats[cur.qi]||(ST.stats[cur.qi]={seen:0,miss:0,fixed:false});
+  s.seen++;
+  if(o.ok){ST.right++;if(ST.mode==='missed'&&s.miss)s.fixed=true}else{s.miss++;s.fixed=false}
+  document.querySelectorAll('.opt').forEach((b,j)=>{b.disabled=true;if(cur.opts[j].ok)b.classList.add('right');if(j===i&&!o.ok)b.classList.add('wrong')});
+  const fb=$('#fb');fb.hidden=false;
+  fb.innerHTML=`<div class="verdict ${o.ok?'ok':'no'}">${o.ok?'Correct':'Not quite'}</div>`+
+    (o.ok?'':`<p class="why"><b>Why that's wrong:</b> ${esc(o.why)}</p><p class="why"><strong>Answer:</strong> ${esc(q[2])}</p>`)+
+    `<p class="src">${esc(q[3])}</p><div class="row"><button class="b primary" type="button" id="next">Next question</button></div>`;
+  ST.pos++;save();renderStats();renderMissed();
+  const nx=$('#next');nx.onclick=()=>{render();window.scrollTo({top:0,behavior:'smooth'})};nx.focus({preventScroll:true});
+  $('#progress').textContent=`Question ${ST.pos} of ${ST.queue.length} this round · ${ST.right} right so far`;
+  $('#barfill').style.width=(ST.pos/ST.queue.length*100)+'%';
+}
+function renderMissed(){
+  const list=ids.filter(i=>(ST.stats[i]||{}).miss>0).sort((a,b)=>(ST.stats[a].fixed-ST.stats[b].fixed)||(ST.stats[b].miss-ST.stats[a].miss));
+  $('#missed').innerHTML=list.length?list.map(i=>{const s=ST.stats[i];return `<div class="mi"><span class="cnt">Missed ${s.miss}×${s.fixed?' · fixed in review':''}</span><p><strong>${esc(Q[i][1])}</strong></p><p>${esc(Q[i][2])}</p></div>`}).join(''):'<p class="note">Nothing yet. Questions you get wrong show up here.</p>';
+}
+$('#resetAll').onclick=()=>{const b=$('#resetAll');if(b.dataset.c){ST.stats={};ST.mode='all';delete b.dataset.c;b.textContent='Reset all progress';newRound()}else{b.dataset.c=1;b.textContent='Tap again to erase everything'}};
+document.addEventListener('keydown',e=>{if(!cur)return;const k=e.key.toUpperCase();if(!cur.answered&&'ABCD'.includes(k)&&k.length===1){const i='ABCD'.indexOf(k);if(i<cur.opts.length)answer(i)}else if(cur.answered&&e.key==='Enter'){const n=$('#next');if(n&&document.activeElement!==n)n.click()}});
+if(!ST.queue||!ST.queue.length||ST.queue.some(i=>!Q[i]))newRound();else render();
+</script>
+</body>
+</html>
