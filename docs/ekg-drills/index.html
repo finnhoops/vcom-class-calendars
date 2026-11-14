@@ -294,28 +294,6 @@ const R=[
   tip:'RBBB in the chest leads PLUS left axis deviation in the limb leads. Only one fascicle is still conducting.',look:['rSR\' in V1','Left axis deviation','Wide QRS']},
  {id:'ivcd',cat:'Conduction blocks',twelve:1,n:'Nonspecific intraventricular conduction delay',al:['nonspecific intraventricular conduction delay','non specific intraventricular conduction delay','intraventricular conduction delay','ivcd','nonspecific conduction delay','nonspecific bundle branch block','non specific bbb','nonspecific bbb'],near:['rbbb','lbbb','irbbb'],
   tip:'The QRS is wide, but it doesn\'t fit the RBBB or LBBB pattern.',look:['Wide QRS everywhere','No rabbit ears in V1','No broad notched R in V6']},
- {id:'infmi',cat:'Ischemia & infarction',twelve:1,n:'Inferior MI (STEMI)',al:['inferior mi','inferior stemi','inferior infarct','inferior wall mi','inferior myocardial infarction','inferior infarction','inferior wall infarction','inferior wall stemi'],near:['rvmi','latmi','oldmi'],
-  tip:'ST elevation in II, III, aVF (RCA), with reciprocal ST depression in I and aVL.',look:['ST up in II, III, aVF','ST down in I, aVL']},
- {id:'latmi',cat:'Ischemia & infarction',twelve:1,n:'Lateral MI (STEMI)',al:['lateral mi','lateral stemi','lateral infarct','lateral wall mi','lateral myocardial infarction','lateral infarction','lateral wall infarction','lateral wall stemi'],near:['almi','infmi'],
-  tip:'ST elevation in I, aVL, V5, V6 (circumflex), reciprocal ST depression inferiorly.',look:['ST up in I, aVL, V5, V6','ST down in II, III, aVF']},
- {id:'antmi',cat:'Ischemia & infarction',twelve:1,n:'Anterior MI (STEMI)',al:['anterior mi','anterior stemi','anterior infarct','anterior wall mi','anterior myocardial infarction','anterior infarction','anterior wall infarction','anterior wall stemi'],near:['asmi','almi','hyperacute'],
-  tip:'ST elevation in V2-V4 (LAD).',look:['ST up in V2, V3, V4','Reciprocal changes inferiorly']},
- {id:'asmi',cat:'Ischemia & infarction',twelve:1,n:'Anteroseptal MI (STEMI)',al:['anteroseptal mi','anteroseptal stemi','anteroseptal infarct','anteroseptal infarction','anteroseptal myocardial infarction','septal mi','septal infarct'],near:['antmi','almi'],
-  tip:'ST elevation in V1-V4 (LAD), often with QS complexes in V1-V2.',look:['ST up in V1-V4','QS in V1-V2']},
- {id:'almi',cat:'Ischemia & infarction',twelve:1,n:'Anterolateral MI (STEMI)',al:['anterolateral mi','anterolateral stemi','anterolateral infarct','anterolateral infarction','anterolateral myocardial infarction'],near:['antmi','latmi','asmi'],
-  tip:'Anterior + lateral: ST elevation in I, aVL and V3-V6 (LAD and circumflex).',look:['ST up in I, aVL','ST up in V3-V6','ST down inferiorly']},
- {id:'postmi',cat:'Ischemia & infarction',twelve:1,n:'Posterior MI',al:['posterior mi','posterior stemi','posterior infarct','posterior wall mi','posterior myocardial infarction','posterior infarction','posterior wall infarction'],near:['rvh','antmi'],
-  tip:'The mirror image of an anterior MI, seen from the front: ST DEPRESSION with tall R waves and upright T in V1-V3. RCA or circumflex.',look:['ST depression in V1-V3','Tall R in V1-V2','Upright T']},
- {id:'rvmi',cat:'Ischemia & infarction',twelve:1,n:'Right ventricular infarction',al:['right ventricular infarct','right ventricular infarction','rv infarct','rv infarction','right ventricular mi','rv mi','inferior mi with rv involvement'],near:['infmi','asmi'],
-  tip:'Looks like an inferior MI, PLUS ST elevation in V1; V2\'s ST is smaller or even depressed. RCA.',look:['ST up in II, III, aVF','ST up in V1','V2 smaller or depressed']},
- {id:'oldmi',cat:'Ischemia & infarction',twelve:1,n:'Old MI (pathologic Q waves)',al:['old mi','old inferior mi','old infarct','prior mi','previous mi','old myocardial infarction','pathologic q waves','pathological q waves','q waves','old inferior infarct'],near:['infmi','tinv'],
-  tip:'Deep, wide Q waves (over 0.04 s, at least 1/3 the R) with a flat ST: the permanent scar. Here in II, III, aVF.',look:['Big Q waves in II, III, aVF','ST back to baseline']},
- {id:'hyperacute',cat:'Ischemia & infarction',twelve:1,n:'Hyperacute T waves (earliest MI)',al:['hyperacute t waves','hyperacute t wave','hyperacute t','hyperacute'],near:['hyperk','antmi'],
-  tip:'The first minutes of an MI: tall, broad T waves in the affected leads. Hyperkalemia Ts are narrow and pointed; hyperacute Ts are broad.',look:['Tall, broad T in V2-V4','Little or no ST elevation yet']},
- {id:'tinv',cat:'Ischemia & infarction',twelve:1,n:'Ischemia (T wave inversion)',al:['ischemia','myocardial ischemia','t wave inversion','t wave inversions','inverted t waves','ischemic t wave inversion','lateral ischemia'],near:['oldmi','lvh','cns'],
-  tip:'Symmetric inverted T waves in leads where T should be upright (here I, aVL, V4-V6). Symmetric = more likely pathologic.',look:['Symmetric T inversion laterally','QRS normal width']},
- {id:'erepol',cat:'Ischemia & infarction',twelve:1,n:'Early repolarization (J-point elevation)',al:['early repolarization','benign early repolarization','j point elevation','j point','early repol'],near:['antmi','pericarditis'],
-  tip:'Very common and benign: the J point is up with a little notch, but the T keeps its own shape. In an MI the ST bows up and merges with the T.',look:['Mild ST elevation in V2-V5','Notch at the J point','T wave keeps its own shape']},
  {id:'pericarditis',cat:'Other 12-lead findings',twelve:1,n:'Pericarditis',al:['pericarditis','acute pericarditis'],near:['erepol','infmi','antmi'],
   tip:'Diffuse, saddle-shaped (concave) ST elevation in almost every lead, plus PR depression. aVR is the opposite. Not limited to one artery\'s territory.',look:['ST up in most leads, concave','PR depression','aVR: ST down, PR up']},
  {id:'pe',cat:'Other 12-lead findings',twelve:1,n:'Acute pulmonary embolism (S1Q3)',al:['pulmonary embolism','acute pulmonary embolism','acute pe','pe','s1q3','s1q3t3','s1 q3','s1 q3 t3'],near:['rbbb','irbbb','stach'],
@@ -324,10 +302,13 @@ const R=[
   tip:'Low voltage everywhere, right axis deviation, and tall P waves (RAE) from the strained right heart.',look:['Small QRSs in every lead','Right axis','Tall P in II, III, aVF']},
  {id:'cns',cat:'Other 12-lead findings',twelve:1,n:'CNS event (cerebral T waves)',al:['cns','cns event','cerebral t waves','cva','sah','subarachnoid hemorrhage','intracranial hemorrhage','stroke','increased intracranial pressure','intracranial bleed'],near:['tinv','hypok'],
   tip:'After a severe stroke or SAH: deep, wide inverted T waves across many leads, U waves, a long QT, often bradycardia (Cushing\'s triad).',look:['Deep, wide T inversion everywhere','U waves','Long QT, slow rate']},
- {id:'brugada',cat:'Other 12-lead findings',twelve:1,n:'Brugada pattern',al:['brugada','brugada syndrome','brugada pattern'],near:['rbbb','erepol','asmi'],
-  tip:'An RBBB-like pattern with "coved" ST elevation in V1-V2 that slopes down into an inverted T. A sudden-death risk.',look:['Coved ST elevation in V1-V2','Inverted T after it','Rest of the leads normal']},
+ {id:'infarct',cat:'Ischemia & infarction',twelve:1,n:'Infarct (MI)',al:['infarct','infarction','mi','stemi','acute mi','myocardial infarction','heart attack','st elevation mi','inferior mi','lateral mi','anterior mi','anteroseptal mi','anterolateral mi','posterior mi','septal mi','rv infarct','right ventricular infarct','inferior stemi','lateral stemi','anterior stemi','old mi','prior mi','old infarct','pathologic q waves','pathological q waves','q waves','injury'],near:['ischemia','pericarditis'],
+  tip:'Infarct = ST elevation that bows up and merges with the T wave in the leads over one wall (with reciprocal ST depression across from it), or new Q waves, which mean the muscle has died. [Putting it All Together s23]',look:['ST elevation merging into the T, in one wall\'s leads','Reciprocal ST depression in the opposite leads','Or deep, wide Q waves (old infarct)']},
+ {id:'ischemia',cat:'Ischemia & infarction',twelve:1,n:'Ischemia',al:['ischemia','myocardial ischemia','ischemic','t wave inversion','t wave inversions','inverted t waves','hyperacute t waves','hyperacute t','hyperacute','peaked t waves','t wave peaking'],near:['infarct','hyperk','cns'],
+  tip:'Ischemia = T wave changes only: the T peaks first (hyperacute), then inverts (symmetric). No ST elevation and no new Q waves yet. [Putting it All Together s23]',look:['Tall, broad (peaked) T waves, or','Symmetric inverted T waves','No ST elevation, no Q waves']},
 ];
 const byId=Object.fromEntries(R.map(r=>[r.id,r]));
+{const MAPN={infmi:'infarct',latmi:'infarct',antmi:'infarct',asmi:'infarct',almi:'infarct',postmi:'infarct',rvmi:'infarct',oldmi:'infarct',hyperacute:'ischemia',tinv:'ischemia',erepol:'infarct',brugada:'rbbb'};R.forEach(r=>{if(r.near)r.near=[...new Set(r.near.map(k=>MAPN[k]||k))].filter(k=>byId[k]&&k!==r.id)})}
 
 // ================= SIGNAL =================
 const FS=250;let T=6,N=T*FS,L=null,RNG=Math.random;
@@ -444,6 +425,16 @@ function copdS(){const b=nsp();b.qrs=b.qrs.map(x=>[x[0],x[1],x[2]*.38]);b.t=[nul
 function cnsS(){if(LD==='aVR')return nsp({t:[0.44,.3,.09,.08]});return nsp({t:[0.44,LD==='V1'?-.25:-.6,.09,.08],u:[.14,.045,.14]})}
 function brugS(){if(LD==='V1')return nsp({qd:.11,qrs:[[.02,.009,.2],[.05,.011,-.5],[.09,.012,.45]],st:.35,conv:.06,t:[null,-.3,.06,.05]});
   if(LD==='V2')return nsp({qd:.11,qrs:[[.02,.009,.3],[.05,.011,-.8],[.09,.012,.5]],st:.3,conv:.05,t:[null,-.2,.06,.05]});if(LD==='V3')return nsp({st:.08});return nsp()}
+let VAR='';
+const MIV=[['Inferior wall: ST up in II, III, aVF (RCA), reciprocal ST down in I, aVL',miS(['II','III','aVF'],['I','aVL'])],
+ ['Lateral wall: ST up in I, aVL, V5, V6 (circumflex), reciprocal ST down in II, III, aVF',miS(['I','aVL','V5','V6'],['II','III','aVF'])],
+ ['Anterior wall: ST up in V2-V4 (LAD)',miS(['V2','V3','V4'],['II','III','aVF'])],
+ ['Anteroseptal: ST up in V1-V4 (LAD)',miS(['V1','V2','V3','V4'],['II','III','aVF'],['V1','V2'])],
+ ['Anterolateral: ST up in I, aVL, V3-V6',miS(['I','aVL','V3','V4','V5','V6'],['II','III','aVF'])],
+ ['Posterior wall: the mirror image, ST DOWN with tall R in V1-V3',postS],
+ ['Right ventricle: inferior ST elevation plus ST up in V1',rvmiS],
+ ['Old infarct: pathologic Q waves in II, III, aVF',oldS]];
+const ISV=[['Peaked (hyperacute) T waves in V2-V4',hyperS],['Symmetric T wave inversion in I, aVL, V4-V6',tinvS]];
 const GEN={
   nsr:S=>sinus(S,ri(62,95)),
   sbrady:S=>sinus(S,ri(38,54)),
@@ -513,6 +504,8 @@ const GEN={
   antmi:TW(62,92,miS(['V2','V3','V4'],['II','III','aVF'])), asmi:TW(62,92,miS(['V1','V2','V3','V4'],['II','III','aVF'],['V1','V2'])),
   almi:TW(62,92,miS(['I','aVL','V3','V4','V5','V6'],['II','III','aVF'])), postmi:TW(62,92,postS), rvmi:TW(58,85,rvmiS),
   oldmi:TW(62,85,oldS), hyperacute:TW(62,90,hyperS), tinv:TW(62,88,tinvS), erepol:TW(55,80,erS),
+  infarct:S=>{const v=pick(MIV);VAR=v[0];TW(62,92,v[1])(S)},
+  ischemia:S=>{const v=pick(ISV);VAR=v[0];TW(62,90,v[1])(S)},
   pericarditis:TW(88,110,periS), pe:TW(105,125,peS), copd:TW(85,105,copdS), cns:TW(48,58,cnsS), brugada:TW(62,85,brugS),
 };
 function fwaves(S,a){const c=[...Array(3)].map(()=>({f:rand(5,8),p:rand(0,6)}));bg(S,t=>a*c.reduce((s,x)=>s+Math.sin(2*Math.PI*x.f*t+x.p),0)/1.6,'atr')}
@@ -655,7 +648,7 @@ function showAnswer(verdict,you){
     :`<div class="verdict ${verdict}">${verdict==='ok'?'Correct':verdict==='close'?'Close':'Not quite'}</div>`;
   fb.innerHTML=head+(PMSG?`<div class="pilemsg">${PMSG}</div>`:'')+(you?`<div class="you">You said: ${esc(you)}</div>`:'')+
     (verdict!=null?`<h2>${esc(r.n)}</h2>`:'')+`<div class="cat">${esc(r.cat)}</div>`+
-    `<div class="trick"><h3>Quick way to remember</h3><p>${r.tip}</p></div>`+
+    ((r.id==='infarct'||r.id==='ischemia')&&VAR?`<div class="pilemsg">This one: ${esc(VAR)}</div>`:'')+`<div class="trick"><h3>Quick way to remember</h3><p>${r.tip}</p></div>`+
     `<div><h3>What to look for</h3><ul class="look">${r.look.map(x=>`<li>${x}</li>`).join('')}</ul></div>`+
     `<div class="btns"><button class="b ghost" type="button" id="b-again">Another strip of this rhythm</button><button class="b primary" type="button" id="b-next2">Next strip</button></div>`;
   $('#b-again').onclick=()=>{load(r.id,true);$('#b-again')&&$('#b-again').focus({preventScroll:true})};
