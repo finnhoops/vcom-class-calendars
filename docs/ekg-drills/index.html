@@ -46,6 +46,7 @@ summary{cursor:pointer;font-weight:700;font-size:.95rem}
 .chip{border:1px solid var(--line);background:var(--field);color:var(--fg);border-radius:999px;padding:5px 12px;font:inherit;font-size:.85rem;cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 .stripcard{display:flex;flex-direction:column;gap:10px;padding:14px}
+.stripcard.wide{width:min(1180px,calc(100vw - 32px));align-self:center}
 .striphead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
 .striphead .study{color:var(--accent);font-weight:500}
 .paperwrap{overflow-x:auto;border-radius:6px;border:1px solid var(--grid-b)}
@@ -530,9 +531,10 @@ function cssVar(n){return getComputedStyle(document.documentElement).getProperty
 const LAYOUT=[['I','aVR','V1','V4'],['II','aVL','V2','V5'],['III','aVF','V3','V6']];
 function draw(){
   if(!SIG)return;
-  const tw=FMT==='12',dur=tw?10:6,mmW=10+dur*25,mmH=tw?132:42,minW=tw?960:640;
+  const tw=FMT==='12',dur=tw?10:6,mmW=10+dur*25,mmH=tw?132:42,minW=tw?0:640;
+  cv.closest('.stripcard').classList.toggle('wide',tw);
   cv.style.minWidth=minW+'px';
-  const cssW=Math.max(minW,cv.parentElement.clientWidth),px=cssW/mmW,cssH=Math.round(mmH*px),dpr=window.devicePixelRatio||1;
+  const cssW=Math.max(minW,cv.parentElement.clientWidth-2),px=cssW/mmW,cssH=Math.round(mmH*px),dpr=window.devicePixelRatio||1;
   cv.style.height=cssH+'px';cv.width=Math.round(cssW*dpr);cv.height=Math.round(cssH*dpr);
   const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);
   c.fillStyle=cssVar('--paper');c.fillRect(0,0,cssW,cssH);
