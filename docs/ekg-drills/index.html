@@ -282,18 +282,8 @@ const R=[
   tip:'Signs of both: tall R in V1 AND tall R in V5-V6, big biphasic RS complexes in V2-V4, often right axis.',look:['Tall R in V1','Tall R in V5-V6','Big RS complexes mid-chest']},
  {id:'rbbb',cat:'Conduction blocks',twelve:1,n:'Right bundle branch block (RBBB)',al:['right bundle branch block','rbbb','right bundle'],near:['irbbb','bifasc','lbbb','rvh'],
   tip:'QRS over 0.12 s with rSR\' "rabbit ears" in V1-V2 and a wide slurred S in I and V6.',look:['QRS 0.12 s or wider','rSR\' in V1-V2','Wide S in I, V6']},
- {id:'irbbb',cat:'Conduction blocks',twelve:1,n:'Incomplete right bundle branch block',al:['incomplete right bundle branch block','incomplete rbbb','irbbb','incomplete right bundle'],near:['rbbb','ivcd'],
-  tip:'The rabbit ears in V1 are there, but the QRS isn\'t wide yet (0.10-0.12 s).',look:['rSR\' in V1','QRS 0.10-0.12 s']},
  {id:'lbbb',cat:'Conduction blocks',twelve:1,n:'Left bundle branch block (LBBB)',al:['left bundle branch block','lbbb','left bundle'],near:['rbbb','ivcd','lvh'],
   tip:'QRS over 0.12 s, deep wide S (QS) in V1, broad notched R in I, aVL, V5, V6. ST and T go the opposite way to the QRS.',look:['QRS 0.12 s or wider','QS in V1','Broad notched R in I, V6']},
- {id:'lafb',cat:'Conduction blocks',twelve:1,n:'Left anterior fascicular block (left anterior hemiblock)',al:['left anterior fascicular block','left anterior hemiblock','lafb','lahb','anterior hemiblock','anterior fascicular block','incomplete lbbb anterior','left anterior fascicle block'],near:['lad','lpfb','bifasc'],
-  tip:'Normal-width QRS with left axis deviation: qR in I and aVL, rS in II, III, aVF. No other cause of LAD.',look:['Left axis deviation','qR in I, aVL','rS in II, III, aVF']},
- {id:'lpfb',cat:'Conduction blocks',twelve:1,n:'Left posterior fascicular block (left posterior hemiblock)',al:['left posterior fascicular block','left posterior hemiblock','lpfb','lphb','posterior hemiblock','posterior fascicular block','incomplete lbbb posterior','left posterior fascicle block'],near:['rad','lafb','rvh'],
-  tip:'Normal-width QRS with right axis deviation: rS in I and aVL, qR in II, III, aVF. No other cause of RAD.',look:['Right axis deviation','rS in I, aVL','qR in II, III, aVF']},
- {id:'bifasc',cat:'Conduction blocks',twelve:1,n:'Bifascicular block (RBBB + left anterior hemiblock)',al:['bifascicular block','bifascicular','rbbb with left anterior hemiblock','rbbb and lafb','rbbb lafb','rbbb with lafb','rbbb plus lafb','rbbb and left anterior hemiblock'],near:['rbbb','lafb'],
-  tip:'RBBB in the chest leads PLUS left axis deviation in the limb leads. Only one fascicle is still conducting.',look:['rSR\' in V1','Left axis deviation','Wide QRS']},
- {id:'ivcd',cat:'Conduction blocks',twelve:1,n:'Nonspecific intraventricular conduction delay',al:['nonspecific intraventricular conduction delay','non specific intraventricular conduction delay','intraventricular conduction delay','ivcd','nonspecific conduction delay','nonspecific bundle branch block','non specific bbb','nonspecific bbb'],near:['rbbb','lbbb','irbbb'],
-  tip:'The QRS is wide, but it doesn\'t fit the RBBB or LBBB pattern.',look:['Wide QRS everywhere','No rabbit ears in V1','No broad notched R in V6']},
  {id:'pericarditis',cat:'Other 12-lead findings',twelve:1,n:'Pericarditis',al:['pericarditis','acute pericarditis'],near:['erepol','infmi','antmi'],
   tip:'Diffuse, saddle-shaped (concave) ST elevation in almost every lead, plus PR depression. aVR is the opposite. Not limited to one artery\'s territory.',look:['ST up in most leads, concave','PR depression','aVR: ST down, PR up']},
  {id:'pe',cat:'Other 12-lead findings',twelve:1,n:'Acute pulmonary embolism (S1Q3)',al:['pulmonary embolism','acute pulmonary embolism','acute pe','pe','s1q3','s1q3t3','s1 q3','s1 q3 t3'],near:['rbbb','irbbb','stach'],
@@ -308,7 +298,7 @@ const R=[
   tip:'Ischemia = T wave changes only: the T peaks first (hyperacute), then inverts (symmetric). No ST elevation and no new Q waves yet. [Putting it All Together s23]',look:['Tall, broad (peaked) T waves, or','Symmetric inverted T waves','No ST elevation, no Q waves']},
 ];
 const byId=Object.fromEntries(R.map(r=>[r.id,r]));
-{const MAPN={infmi:'infarct',latmi:'infarct',antmi:'infarct',asmi:'infarct',almi:'infarct',postmi:'infarct',rvmi:'infarct',oldmi:'infarct',hyperacute:'ischemia',tinv:'ischemia',erepol:'infarct',brugada:'rbbb'};R.forEach(r=>{if(r.near)r.near=[...new Set(r.near.map(k=>MAPN[k]||k))].filter(k=>byId[k]&&k!==r.id)})}
+{const MAPN={infmi:'infarct',latmi:'infarct',antmi:'infarct',asmi:'infarct',almi:'infarct',postmi:'infarct',rvmi:'infarct',oldmi:'infarct',hyperacute:'ischemia',tinv:'ischemia',erepol:'infarct',brugada:'rbbb',irbbb:'rbbb',lafb:'lad',lpfb:'rad',bifasc:'rbbb',ivcd:'lbbb'};R.forEach(r=>{if(r.near)r.near=[...new Set(r.near.map(k=>MAPN[k]||k))].filter(k=>byId[k]&&k!==r.id)})}
 
 // ================= SIGNAL =================
 const FS=250;let T=6,N=T*FS,L=null,RNG=Math.random;
