@@ -573,11 +573,11 @@ function match(input){
 }
 
 // ================= STATE =================
-const ST={cats:CATS.slice(),fmt:'mix',mode:'all',pile:{},hist:{}},SC={ok:0,n:0,st:0};
+const ST={cats:CATS.slice(),fmt:'mix',mode:'all',pile:{},hist:{},skip:{}},SC={ok:0,n:0,st:0};
 try{Object.assign(ST,JSON.parse(localStorage.getItem('ekg-set')||'{}'))}catch(e){}
 try{Object.assign(SC,JSON.parse(localStorage.getItem('ekg-sc')||'{}'))}catch(e){}
 ST.cats=ST.cats.filter(c=>CATS.includes(c));if(!ST.cats.length)ST.cats=CATS.slice();
-if(!ST.pile||typeof ST.pile!=='object')ST.pile={};if(!ST.hist||typeof ST.hist!=='object')ST.hist={};for(const k in ST.hist)if(!byId[k])delete ST.hist[k];for(const k in ST.pile)if(!byId[k])delete ST.pile[k];if(ST.mode!=='pile')ST.mode='all';
+if(!ST.pile||typeof ST.pile!=='object')ST.pile={};if(!ST.hist||typeof ST.hist!=='object')ST.hist={};for(const k in ST.hist)if(!byId[k])delete ST.hist[k];for(const k in ST.pile)if(!byId[k])delete ST.pile[k];if(ST.mode!=='pile')ST.mode='all';if(!ST.skip||typeof ST.skip!=='object')ST.skip={};for(const k in ST.skip)if(!byId[k])delete ST.skip[k];
 const save=()=>{try{localStorage.setItem('ekg-set',JSON.stringify(ST));localStorage.setItem('ekg-sc',JSON.stringify(SC))}catch(e){}};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -588,14 +588,15 @@ function renderStruggle(){
   const ids=Object.keys(ST.hist).filter(k=>byId[k]);
   const col=a=>a>=.8?'var(--good)':a>=.5?'var(--warn)':'var(--bad)';
   const row=(name,h,btn)=>{const a=h.ok/h.n,miss=h.n-h.ok;return `<div class="sr"><b>${esc(name)}</b><span class="num">${Math.round(a*100)}% · ${h.ok}/${h.n} right${miss?` · ${miss} missed`:''}</span><div class="bar"><i style="width:${Math.max(4,a*100)}%;background:${col(a)}"></i></div>${btn||''}</div>`};
-  const weak=ids.filter(k=>ST.hist[k].ok<ST.hist[k].n).sort((a,b)=>(ST.hist[a].ok/ST.hist[a].n-ST.hist[b].ok/ST.hist[b].n)||((ST.hist[b].n-ST.hist[b].ok)-(ST.hist[a].n-ST.hist[a].ok)));
+  const weak=ids.filter(k=>ST.hist[k].ok<ST.hist[k].n&&!ST.skip[k]).sort((a,b)=>(ST.hist[a].ok/ST.hist[a].n-ST.hist[b].ok/ST.hist[b].n)||((ST.hist[b].n-ST.hist[b].ok)-(ST.hist[a].n-ST.hist[a].ok)));
   const cats=CATS.map(c=>{const hs=ids.filter(k=>byId[k].cat===c).map(k=>ST.hist[k]);return {c,n:hs.reduce((x,h)=>x+h.n,0),ok:hs.reduce((x,h)=>x+h.ok,0)}}).filter(x=>x.n).sort((a,b)=>a.ok/a.n-b.ok/b.n);
   $('#strSum').textContent=`Where you're struggling (${weak.length})`;
   $('#strList').innerHTML=!ids.length?'<p class="note">Nothing yet. Answer some strips and your weak spots show up here.</p>':
     '<h3 class="sg">By topic, weakest first</h3>'+cats.map(x=>row(x.c,x)).join('')+
     '<h3 class="sg">Rhythms you\'ve missed, weakest first</h3>'+(weak.length?weak.map(k=>row(byId[k].n,ST.hist[k],`<button type="button" data-drill="${k}">Add to redo pile</button>`)).join(''):'<p class="note">You haven\'t missed any yet.</p>');
 }
-function addPile(id,need){const e=ST.pile[id]||(ST.pile[id]={miss:0,need:0});e.miss++;e.need=Math.max(e.need,need)}
+let LASTADD=[];
+function addPile(id,need){if(ST.skip[id])return;if(!LASTADD.some(x=>x[0]===id))LASTADD.push([id,ST.pile[id]?{...ST.pile[id]}:null]);const e=ST.pile[id]||(ST.pile[id]={miss:0,need:0});e.miss++;e.need=Math.max(e.need,need)}
 function renderPile(){
   const ids=pileIds();
   const md=$('#modes');md.innerHTML='';
@@ -603,6 +604,9 @@ function renderPile(){
     b.onclick=()=>{ST.mode=v;save();renderPile();next()};md.appendChild(b)});
   $('#pileSum').textContent=`Redo pile (${ids.length})`;
   $('#pileList').innerHTML=ids.length?ids.sort((a,b)=>ST.pile[b].miss-ST.pile[a].miss).map(k=>`<div class="pi"><b>${esc(byId[k].n)}</b><span>missed ${ST.pile[k].miss}× · ${ST.pile[k].need} more right to clear</span></div>`).join(''):'<p class="note">Empty. Miss a strip and it lands here.</p>';
+  const sk=Object.keys(ST.skip).filter(k=>byId[k]);
+  if(sk.length)$('#pileList').insertAdjacentHTML('beforeend',`<p class="note" style="margin-top:10px"><b>Skipped (${sk.length})</b>: these don't go in your pile when you miss them.</p>`+sk.map(k=>`<div class="pi"><b>${esc(byId[k].n)}</b><button class="chip" type="button" data-unskip="${k}">Undo skip</button></div>`).join(''));
+  $('#pileList').querySelectorAll('[data-unskip]').forEach(b=>b.onclick=()=>{delete ST.skip[b.dataset.unskip];save();renderPile();renderStruggle()});
 }
 function renderScore(){$('#score').innerHTML=`<span>Correct <b>${SC.ok}</b>/<b>${SC.n}</b></span><span>Streak <b>${SC.st}</b></span>`}
 function renderCats(){
@@ -643,7 +647,12 @@ function showAnswer(verdict,you){
     (verdict!=null?`<h2>${esc(r.n)}</h2>`:'')+`<div class="cat">${esc(r.cat)}</div>`+
     ((r.id==='infarct'||r.id==='ischemia')&&VAR?`<div class="pilemsg">This one: ${esc(VAR)}</div>`:'')+`<div class="trick"><h3>Quick way to remember</h3><p>${r.tip}</p></div>`+
     `<div><h3>What to look for</h3><ul class="look">${r.look.map(x=>`<li>${x}</li>`).join('')}</ul></div>`+
+    (LASTADD.length&&!study?`<div class="btns"><button class="b ghost" type="button" id="b-skip">Skip: I don't care about ${esc(r.n)}</button></div>`:'')+
     `<div class="btns"><button class="b ghost" type="button" id="b-again">Another strip of this rhythm</button><button class="b primary" type="button" id="b-next2">Next strip</button></div>`;
+  const sk=$('#b-skip');if(sk)sk.onclick=()=>{
+    LASTADD.forEach(([k,prev])=>{if(prev)ST.pile[k]=prev;else delete ST.pile[k]});LASTADD=[];
+    ST.skip[r.id]=1;delete ST.pile[r.id];const h=ST.hist[r.id];if(h&&h.n>h.ok){h.n--;if(!h.n)delete ST.hist[r.id]}
+    save();renderPile();renderStruggle();sk.textContent=`Skipped. ${r.n} won't go in your redo pile or struggle list.`;sk.disabled=true};
   $('#b-again').onclick=()=>{load(r.id,true);$('#b-again')&&$('#b-again').focus({preventScroll:true})};
   $('#b-next2').onclick=()=>{next();$('#guess').focus({preventScroll:true});window.scrollTo({top:0,behavior:'smooth'})};
 }
@@ -654,7 +663,7 @@ $('#ans').addEventListener('submit',e=>{
   if(!id&&!study){const fb=$('#fb');fb.hidden=false;fb.innerHTML=`<div class="verdict close">I didn't recognize that</div><p>Try the full rhythm name, or pick one from the suggestions as you type.</p>`;return}
   const ok=id===CUR.id,close=!ok&&(CUR.near||[]).includes(id);
   PMSG='';
-  if(!done){SC.n++;if(ok){SC.ok++;SC.st++}else SC.st=0;done=true;
+  if(!done){LASTADD=[];SC.n++;if(ok){SC.ok++;SC.st++}else SC.st=0;done=true;
     if(!study){
       rec(CUR.id,ok);
       if(ok){const e=ST.pile[CUR.id];if(e){e.need--;if(e.need<=0){delete ST.pile[CUR.id];PMSG='Cleared from your redo pile.'}else PMSG=`Nice. Get it right ${e.need} more time${e.need>1?'s':''} to clear it from your pile.`}}
@@ -664,7 +673,7 @@ $('#ans').addEventListener('submit',e=>{
   showAnswer(ok?'ok':close?'close':'no',txt+(id&&!ok?` (${byId[id].n})`:''));PMSG='';
   $('#fb').scrollIntoView({behavior:'smooth',block:'nearest'});
 });
-$('#b-show').onclick=()=>{PMSG='';if(!done){SC.n++;SC.st=0;done=true;if(!study){addPile(CUR.id,2);rec(CUR.id,false);PMSG='Added to your redo pile.'}save();renderScore();renderPile();renderStruggle()}showAnswer(null,null);PMSG=''};
+$('#b-show').onclick=()=>{PMSG='';if(!done){LASTADD=[];SC.n++;SC.st=0;done=true;if(!study){addPile(CUR.id,2);rec(CUR.id,false);PMSG='Added to your redo pile.'}save();renderScore();renderPile();renderStruggle()}showAnswer(null,null);PMSG=''};
 $('#pileClear').onclick=()=>{const b=$('#pileClear');if(b.dataset.c){ST.pile={};ST.mode='all';delete b.dataset.c;b.textContent='Empty the pile';save();renderPile()}else{b.dataset.c=1;b.textContent='Tap again to empty it'}};
 $('#b-next').onclick=()=>{next();$('#guess').focus({preventScroll:true})};
 
@@ -673,7 +682,7 @@ $('#names').innerHTML=R.map(r=>`<option value="${esc(r.n)}">`).join('');
 $('#ref').innerHTML=CATS.map(c=>`<div class="refgroup"><h3>${c}</h3>${R.filter(r=>r.cat===c).map(r=>`<div class="refrow"><b>${esc(r.n)}</b><button type="button" data-id="${r.id}">See a strip</button><p>${r.tip}</p></div>`).join('')}</div>`).join('');
 $('#ref').addEventListener('click',e=>{const b=e.target.closest('button[data-id]');if(!b)return;load(b.dataset.id,true);window.scrollTo({top:0,behavior:'smooth'})});
 
-$('#strList').addEventListener('click',e=>{const b=e.target.closest('button[data-drill]');if(!b)return;addPile(b.dataset.drill,2);save();renderPile();b.textContent='Added';b.disabled=true});
+$('#strList').addEventListener('click',e=>{const b=e.target.closest('button[data-drill]');if(!b)return;delete ST.skip[b.dataset.drill];addPile(b.dataset.drill,2);save();renderPile();b.textContent='Added';b.disabled=true});
 $('#strReset').onclick=()=>{const b=$('#strReset');if(b.dataset.c){ST.hist={};delete b.dataset.c;b.textContent='Reset this record';save();renderStruggle()}else{b.dataset.c=1;b.textContent='Tap again to erase the record'}};
 renderCats();renderScore();renderPile();renderStruggle();next();
 </script>
