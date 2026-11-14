@@ -74,6 +74,12 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid
 .refrow p{margin:2px 0 0;font-size:.88rem;color:var(--muted);grid-column:1}
 .refrow button{grid-row:1/span 2;grid-column:2;font:inherit;font-size:.85rem;font-weight:700;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:7px;padding:6px 10px;cursor:pointer;white-space:nowrap}
 .note{font-size:.85rem;color:var(--muted);margin:0}
+.pilebar{display:flex;flex-direction:column;gap:12px;padding:14px 18px}
+.pilebar details summary{font-size:.9rem}
+.pilelist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.pi{display:flex;justify-content:space-between;gap:10px;font-size:.92rem;border-top:1px solid var(--line);padding-top:6px}
+.pi span{font-family:var(--f-mono);font-size:.8rem;color:var(--muted);white-space:nowrap}
+.pilemsg{font-size:.9rem;font-weight:700;color:var(--accent)}
 @media (prefers-reduced-motion:no-preference){.fb{animation:rise .2s ease-out}@keyframes rise{from{transform:translateY(4px)}to{transform:none}}}
 </style>
 
@@ -86,6 +92,14 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid
     <div class="score" id="score" aria-live="polite"></div>
   </header>
 
+  <section class="panel pilebar">
+    <div class="chips" id="modes" style="margin-top:0"></div>
+    <details id="pileDet"><summary id="pileSum">Redo pile</summary>
+      <p class="note">Rhythms you missed (or used Show answer on) and rhythms you mixed them up with. Get one right twice to clear it.</p>
+      <div id="pileList" class="pilelist"></div>
+      <button class="b ghost" type="button" id="pileClear">Empty the pile</button>
+    </details>
+  </section>
   <details class="panel" id="topics">
     <summary>Topics to practice</summary>
     <div class="chips" id="cats"></div>
@@ -560,14 +574,25 @@ function match(input){
 }
 
 // ================= STATE =================
-const ST={cats:CATS.slice(),fmt:'mix'},SC={ok:0,n:0,st:0};
+const ST={cats:CATS.slice(),fmt:'mix',mode:'all',pile:{}},SC={ok:0,n:0,st:0};
 try{Object.assign(ST,JSON.parse(localStorage.getItem('ekg-set')||'{}'))}catch(e){}
 try{Object.assign(SC,JSON.parse(localStorage.getItem('ekg-sc')||'{}'))}catch(e){}
 ST.cats=ST.cats.filter(c=>CATS.includes(c));if(!ST.cats.length)ST.cats=CATS.slice();
+if(!ST.pile||typeof ST.pile!=='object')ST.pile={};for(const k in ST.pile)if(!byId[k])delete ST.pile[k];if(ST.mode!=='pile')ST.mode='all';
 const save=()=>{try{localStorage.setItem('ekg-set',JSON.stringify(ST));localStorage.setItem('ekg-sc',JSON.stringify(SC))}catch(e){}};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let CUR=null,done=false,study=false,last=null;
+let CUR=null,done=false,study=false,last=null,fromPile=false;
+const pileIds=()=>Object.keys(ST.pile).filter(k=>byId[k]);
+function addPile(id,need){const e=ST.pile[id]||(ST.pile[id]={miss:0,need:0});e.miss++;e.need=Math.max(e.need,need)}
+function renderPile(){
+  const ids=pileIds();
+  const md=$('#modes');md.innerHTML='';
+  [['all','All topics'],['pile',`My redo pile (${ids.length})`]].forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',ST.mode===v);
+    b.onclick=()=>{ST.mode=v;save();renderPile();next()};md.appendChild(b)});
+  $('#pileSum').textContent=`Redo pile (${ids.length})`;
+  $('#pileList').innerHTML=ids.length?ids.sort((a,b)=>ST.pile[b].miss-ST.pile[a].miss).map(k=>`<div class="pi"><b>${esc(byId[k].n)}</b><span>missed ${ST.pile[k].miss}× · ${ST.pile[k].need} more right to clear</span></div>`).join(''):'<p class="note">Empty. Miss a strip and it lands here.</p>';
+}
 function renderScore(){$('#score').innerHTML=`<span>Correct <b>${SC.ok}</b>/<b>${SC.n}</b></span><span>Streak <b>${SC.st}</b></span>`}
 function renderCats(){
   const el=$('#cats');el.innerHTML='';
@@ -583,19 +608,27 @@ function load(id,isStudy){
   const seed=Math.floor(Math.random()*1e9),dur=FMT==='12'?10:6;SIG={};
   for(const ld of (FMT==='12'?Object.keys(LEADS):['II']))SIG[ld]=makeLead(id,ld,seed,dur);
   cv.setAttribute('aria-label',FMT==='12'?'12-lead EKG':'EKG rhythm strip');draw();
-  const sm=$('#s-mode');sm.hidden=!study;sm.innerHTML=study?`<span class="study">Study strip: ${esc(CUR.n)}</span>`:'';
+  const sm=$('#s-mode');const inPile=!study&&ST.pile[id];sm.hidden=!(study||inPile);sm.innerHTML=study?`<span class="study">Study strip: ${esc(CUR.n)}</span>`:inPile?'<span class="study">From your redo pile</span>':'';
   $('#guess').value='';$('#fb').hidden=true;
   if(study)showAnswer(null,null);
 }
 function next(){
+  const ids=pileIds().filter(k=>!(ST.fmt==='strip'&&byId[k].twelve));
+  if(ST.mode==='pile'&&!ids.length){ST.mode='all';save();renderPile();const fb=$('#fb');fb.hidden=false;fb.innerHTML='<div class="verdict ok">Pile cleared</div><p>Nothing left to redo. Back to all topics.</p>'}
+  if(ids.length&&(ST.mode==='pile'||Math.random()<0.25)){
+    let id=pick(ids.length>1?ids.filter(k=>k!==last):ids);
+    if(ST.mode==='pile'&&Math.random()<0.25){const nb=(byId[id].near||[]).filter(k=>byId[k]&&!(ST.fmt==='strip'&&byId[k].twelve));if(nb.length)id=pick(nb)}
+    fromPile=true;load(id,false);return}
+  fromPile=false;
   let pool=R.filter(r=>ST.cats.includes(r.cat)&&r.id!==last&&!(ST.fmt==='strip'&&r.twelve));if(!pool.length)pool=R;
   load(pick(pool).id,false);
 }
+let PMSG='';
 function showAnswer(verdict,you){
   const r=CUR,fb=$('#fb');fb.hidden=false;
   const head=verdict==null?`<div class="verdict ok">${esc(r.n)}</div>`
     :`<div class="verdict ${verdict}">${verdict==='ok'?'Correct':verdict==='close'?'Close':'Not quite'}</div>`;
-  fb.innerHTML=head+(you?`<div class="you">You said: ${esc(you)}</div>`:'')+
+  fb.innerHTML=head+(PMSG?`<div class="pilemsg">${PMSG}</div>`:'')+(you?`<div class="you">You said: ${esc(you)}</div>`:'')+
     (verdict!=null?`<h2>${esc(r.n)}</h2>`:'')+`<div class="cat">${esc(r.cat)}</div>`+
     `<div class="trick"><h3>Quick way to remember</h3><p>${r.tip}</p></div>`+
     `<div><h3>What to look for</h3><ul class="look">${r.look.map(x=>`<li>${x}</li>`).join('')}</ul></div>`+
@@ -609,11 +642,18 @@ $('#ans').addEventListener('submit',e=>{
   if(id==='second?'){const fb=$('#fb');fb.hidden=false;fb.innerHTML=`<div class="verdict close">Which type?</div><p>Second-degree AV block has two types. Say type I (Wenckebach) or type II (Mobitz II).</p>`;return}
   if(!id&&!study){const fb=$('#fb');fb.hidden=false;fb.innerHTML=`<div class="verdict close">I didn't recognize that</div><p>Try the full rhythm name, or pick one from the suggestions as you type.</p>`;return}
   const ok=id===CUR.id,close=!ok&&(CUR.near||[]).includes(id);
-  if(!done){SC.n++;if(ok){SC.ok++;SC.st++}else SC.st=0;done=true;save();renderScore()}
-  showAnswer(ok?'ok':close?'close':'no',txt+(id&&!ok?` (${byId[id].n})`:''));
+  PMSG='';
+  if(!done){SC.n++;if(ok){SC.ok++;SC.st++}else SC.st=0;done=true;
+    if(!study){
+      if(ok){const e=ST.pile[CUR.id];if(e){e.need--;if(e.need<=0){delete ST.pile[CUR.id];PMSG='Cleared from your redo pile.'}else PMSG=`Nice. Get it right ${e.need} more time${e.need>1?'s':''} to clear it from your pile.`}}
+      else{addPile(CUR.id,2);let m='Added to your redo pile.';if(id&&byId[id]&&id!==CUR.id){addPile(id,1);m=`Added to your redo pile, along with ${byId[id].n} so you practice telling them apart.`}PMSG=m}
+    }
+    save();renderScore();renderPile()}
+  showAnswer(ok?'ok':close?'close':'no',txt+(id&&!ok?` (${byId[id].n})`:''));PMSG='';
   $('#fb').scrollIntoView({behavior:'smooth',block:'nearest'});
 });
-$('#b-show').onclick=()=>{if(!done){SC.n++;SC.st=0;done=true;save();renderScore()}showAnswer(null,null)};
+$('#b-show').onclick=()=>{PMSG='';if(!done){SC.n++;SC.st=0;done=true;if(!study){addPile(CUR.id,2);PMSG='Added to your redo pile.'}save();renderScore();renderPile()}showAnswer(null,null);PMSG=''};
+$('#pileClear').onclick=()=>{const b=$('#pileClear');if(b.dataset.c){ST.pile={};ST.mode='all';delete b.dataset.c;b.textContent='Empty the pile';save();renderPile()}else{b.dataset.c=1;b.textContent='Tap again to empty it'}};
 $('#b-next').onclick=()=>{next();$('#guess').focus({preventScroll:true})};
 
 // study list + suggestions
@@ -621,7 +661,7 @@ $('#names').innerHTML=R.map(r=>`<option value="${esc(r.n)}">`).join('');
 $('#ref').innerHTML=CATS.map(c=>`<div class="refgroup"><h3>${c}</h3>${R.filter(r=>r.cat===c).map(r=>`<div class="refrow"><b>${esc(r.n)}</b><button type="button" data-id="${r.id}">See a strip</button><p>${r.tip}</p></div>`).join('')}</div>`).join('');
 $('#ref').addEventListener('click',e=>{const b=e.target.closest('button[data-id]');if(!b)return;load(b.dataset.id,true);window.scrollTo({top:0,behavior:'smooth'})});
 
-renderCats();renderScore();next();
+renderCats();renderScore();renderPile();next();
 </script>
 
 </body>
