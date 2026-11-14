@@ -81,7 +81,7 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid
   <header>
     <div>
       <h1>EKG Strip Drills</h1>
-      <p class="sub">Rhythm strips and 12-leads. Name the rhythm.</p>
+      <p class="sub">Rhythm strips, pacemakers and 12-leads from the course slideshows. Name what you see.</p>
     </div>
     <div class="score" id="score" aria-live="polite"></div>
   </header>
@@ -121,7 +121,7 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid
 <script>
 // ================= RHYTHMS =================
 // cat follows the class's 5 arrhythmia types, plus electrolytes & drugs.
-const CATS=['Sinus origin','Ectopic','Reentrant','Conduction blocks','Pre-excitation','Electrolytes & drugs'];
+const CATS=['Sinus origin','Ectopic','Reentrant','Conduction blocks','Pre-excitation','Pacemakers','Axis & hypertrophy','Ischemia & infarction','Other 12-lead findings','Electrolytes & drugs'];
 const R=[
  {id:'nsr',cat:'Sinus origin',n:'Normal sinus rhythm',al:['normal sinus rhythm','normal sinus','nsr','sinus rhythm','regular sinus rhythm'],
   tip:'Your baseline: every P gets a QRS, rate 60–100, perfectly regular.',look:['Rate 60–100, regular','Upright P before every QRS','PR 0.12–0.20 s, QRS under 0.12 s']},
@@ -158,20 +158,20 @@ const R=[
   tip:'Bi = 2: normal, PVC, normal, PVC. Every second beat is a PVC.',look:['Normal beat and PVC alternate','Repeating pairs']},
  {id:'trigem',cat:'Ectopic',n:'Ventricular trigeminy',al:['ventricular trigeminy','trigeminy','pvc trigeminy','trigeminal pvcs'],near:['pvcu','bigem'],
   tip:'Tri = 3: normal, normal, PVC. Every third beat is a PVC.',look:['Two normal beats, then a PVC, repeating']},
- {id:'idio',cat:'Ectopic',n:'Idioventricular rhythm',al:['idioventricular rhythm','idioventricular','ventricular escape rhythm','ivr','accelerated idioventricular rhythm'],near:['junc','vt','avb3'],
+ {id:'idio',cat:'Ectopic',n:'Idioventricular rhythm',al:['idioventricular rhythm','idioventricular','ventricular escape rhythm','ivr'],near:['junc','vt','avb3','aivr','vescape'],
   tip:'The ventricles are the last backup pacemaker (your slide: 30–45 bpm). Slow AND wide, with no P waves.',look:['Rate about 30–45, regular','Wide QRS','No P waves']},
  {id:'vt',cat:'Ectopic',n:'Ventricular tachycardia',al:['ventricular tachycardia','vtach','vt','monomorphic vt','monomorphic ventricular tachycardia'],near:['tdp','psvt','afwpw'],
   tip:'Wide, fast, regular, no P waves, every complex the same. Fast + wide = V-tach until proven otherwise. Unlike PSVT, it won\'t break with carotid massage.',look:['Rate 150–250, regular','Wide QRS, all identical','No visible P waves']},
  {id:'vf',cat:'Ectopic',n:'Ventricular fibrillation',al:['ventricular fibrillation','vfib','vf'],near:['tdp','asys'],
   tip:'Fib = quivering. Chaotic squiggle with no real QRS at all. No pulse.',look:['No identifiable P, QRS or T','Chaotic, irregular waves']},
- {id:'tdp',cat:'Ectopic',n:'Torsades de pointes',al:['torsades de pointes','torsades','torsade','tdp','polymorphic vt','polymorphic ventricular tachycardia'],near:['vt','vf'],
+ {id:'tdp',cat:'Ectopic',n:'Torsades de pointes',al:['torsades de pointes','torsades','torsade','tdp'],near:['vt','vf','polyvt'],
   tip:'"Twisting of the points": wide complexes that grow, shrink and flip around the baseline like a twisted ribbon. Linked to long QT and low magnesium.',look:['Very fast, wide complexes','Amplitude swells and shrinks','Looks like it twists around the baseline']},
  // ---- reentrant
  {id:'afib',cat:'Reentrant',n:'Atrial fibrillation',al:['atrial fibrillation','afib','af','atrial fib'],near:['mat','afwpw','aflut'],
   tip:'Irregularly irregular with no P waves, just a wavy baseline. There\'s no pattern to the R-R spacing at all.',look:['Irregularly irregular','No P waves; wavy (fibrillatory) baseline','Narrow QRS']},
  {id:'aflut',cat:'Reentrant',n:'Atrial flutter',al:['atrial flutter','aflutter','flutter','afl'],near:['afib'],
   tip:'Sawtooth flutter waves (about 300/min) between the QRSs. Count the flutter waves per QRS: 2:1, 3:1, 4:1.',look:['Sawtooth baseline instead of P waves','Regular atrial rate around 300','Narrow QRS every 2nd, 3rd or 4th wave']},
- {id:'psvt',cat:'Reentrant',n:'Paroxysmal supraventricular tachycardia (PSVT)',al:['paroxysmal supraventricular tachycardia','psvt','svt','supraventricular tachycardia','avnrt','avrt','av nodal reentrant tachycardia','atrioventricular nodal reentrant tachycardia','atrioventricular reentrant tachycardia'],near:['stach','pat','vt'],
+ {id:'psvt',cat:'Reentrant',n:'Paroxysmal supraventricular tachycardia (PSVT)',al:['paroxysmal supraventricular tachycardia','psvt','svt','supraventricular tachycardia','avnrt','av nodal reentrant tachycardia','atrioventricular nodal reentrant tachycardia','atrioventricular reentrant tachycardia'],near:['stach','pat','vt'],
   tip:'Narrow, regular, very fast (150–250), P waves hidden. Starts and stops suddenly, and may break with carotid massage. Subtypes: AVNRT and AVRT.',look:['Rate 150–250, very regular','Narrow QRS','No visible P waves']},
  // ---- conduction blocks
  {id:'avb1',cat:'Conduction blocks',n:'First-degree AV block',al:['first degree av block','first degree heart block','first degree block','first degree'],near:['nsr','avb2i'],
@@ -202,6 +202,104 @@ const R=[
   tip:'Slow rate plus Osborn (J) waves: a hump right at the end of the QRS. Shivering can add fuzzy artifact.',look:['Bradycardia','Hump at the end of the QRS (J wave)','Possible shivering artifact']},
  {id:'dig',cat:'Electrolytes & drugs',n:'Digoxin effect',al:['digoxin effect','digoxin','dig effect','digitalis','digitalis effect','digoxin toxicity','dig toxicity','dig'],near:['hypok'],
   tip:'Scooped, sagging ST depression, like a "Salvador Dalí mustache" or a hockey stick. Often a slightly long PR too.',look:['Scooped ST depression','Small T wave','Slightly long PR']},
+ // ---- added rhythms
+ {id:'sss',cat:'Sinus origin',n:'Sick sinus syndrome (brady-tachy)',al:['sick sinus syndrome','sick sinus','brady tachy syndrome','tachy brady syndrome','bradycardia tachycardia syndrome','sss'],near:['sarrest','afib','psvt'],
+  tip:'The SA node can\'t make up its mind: runs of fast rhythm, then a long pause, then slow beats. It\'s the B in HIS DEBS.',look:['A fast run (narrow, no clear P)','Then a long pause','Then slow sinus beats']},
+ {id:'aescape',cat:'Sinus origin',n:'Atrial escape beat',al:['atrial escape beat','atrial escape beats','atrial escape'],near:['sescape','pac','vescape'],
+  tip:'A pause, then a LATE rescue beat with a different-looking P wave. Late = escape; early = PAC.',look:['A sinus pause','A late beat with an abnormal P','Narrow QRS']},
+ {id:'vescape',cat:'Sinus origin',n:'Ventricular escape beat',al:['ventricular escape beat','ventricular escape beats','ventricular escape complex'],near:['sescape','pvcu','idio'],
+  tip:'A pause, then a LATE wide beat with no P. The ventricle is the last backup. A wide beat that comes EARLY is a PVC.',look:['A sinus pause','A late, wide QRS with no P','Sinus beats resume']},
+ {id:'aivr',cat:'Ectopic',n:'Accelerated idioventricular rhythm (AIVR)',al:['accelerated idioventricular rhythm','accelerated idioventricular','aivr'],near:['idio','vt'],
+  tip:'Idioventricular, but faster than the ventricle\'s usual 20-40: about 50-100. Wide, regular, no P. A benign rhythm seen during an acute MI.',look:['Wide QRS, no P','Regular','Rate about 50-100']},
+ {id:'accjunc',cat:'Ectopic',n:'Accelerated junctional rhythm',al:['accelerated junctional rhythm','accelerated junctional'],near:['junc','junctach'],
+  tip:'Junctional (no P or inverted P, narrow QRS) but faster than the junction\'s 40-60: 60-100.',look:['Narrow QRS','No P or an inverted P','Rate 60-100, regular']},
+ {id:'junctach',cat:'Ectopic',n:'Junctional tachycardia',al:['junctional tachycardia','junctional tach'],near:['accjunc','psvt','stach'],
+  tip:'Junctional beats over 100: narrow QRS with no P or an inverted P.',look:['Narrow QRS','No P or an inverted P','Rate over 100, regular']},
+ {id:'quadrigem',cat:'Ectopic',n:'Ventricular quadrigeminy',al:['ventricular quadrigeminy','quadrigeminy','quadrageminy'],near:['trigem','bigem','pvcu'],
+  tip:'Quad = 4: three normal beats, then a PVC, repeating (1:3).',look:['Three normal beats, then a PVC','Repeats in groups of four']},
+ {id:'couplet',cat:'Ectopic',n:'PVC couplet',al:['pvc couplet','pvc couplets','couplet','couplets','paired pvcs','pvc pair'],near:['pvcu','vt'],
+  tip:'Two PVCs back to back. Couplets are one of the "rules of malignancy." Three or more in a row is V-tach.',look:['Two wide early beats in a row','Normal beats around them']},
+ {id:'ront',cat:'Ectopic',n:'R-on-T PVC',al:['r on t','r on t pvc','r on t phenomenon','r on t pvcs'],near:['pvcu','couplet','tdp'],
+  tip:'A PVC that lands on the T wave of the beat before it, while the heart is repolarizing. It can set off VT or VF, so it\'s a rule of malignancy.',look:['A PVC very early','It falls on the previous T wave']},
+ {id:'polyvt',cat:'Ectopic',n:'Polymorphic ventricular tachycardia',al:['polymorphic ventricular tachycardia','polymorphic vt','polymorphic v tach','polymorphic vtach'],near:['tdp','vt','vf'],
+  tip:'Fast and wide like VT, but the QRSs keep changing shape. Torsades is a special polymorphic VT that twists around the baseline with a long QT.',look:['Fast wide complexes','Shapes vary beat to beat','No steady twisting pattern']},
+ {id:'psvtwpw',cat:'Pre-excitation',n:'PSVT with WPW (AVRT)',al:['psvt with wpw','svt with wpw','wpw with psvt','wpw with svt','avrt','atrioventricular reentrant tachycardia','orthodromic avrt','wpw svt'],near:['psvt','wpw','afwpw'],
+  tip:'Reentry through the bundle of Kent: down the AV node, back up the accessory pathway. Narrow, regular, very fast, with an inverted P just after each QRS. The delta wave disappears.',look:['Narrow, regular, 150-250','Inverted P right after each QRS','No delta wave during the run']},
+ {id:'avb21',cat:'Conduction blocks',n:'2:1 AV block',al:['2:1 av block','2:1 block','2:1 heart block','2 to 1 av block','2 to 1 block','two to one block','2:1 second degree av block','second degree av block 2:1'],near:['avb2i','avb2ii','avb3'],
+  tip:'Every other P gets through. You can\'t tell Wenckebach from Mobitz II because you never see two PRs in a row to compare.',look:['Two P waves for every QRS','Conducted PRs all the same','Regular P-P']},
+ {id:'apaced',cat:'Pacemakers',n:'Atrial paced rhythm',al:['atrial paced rhythm','atrial paced','atrial pacing','a paced','aai'],near:['vpaced','avpaced'],
+  tip:'A pacer spike, then a P wave, then a normal narrow QRS. The pacemaker is in the atrium.',look:['Spike before each P','Normal narrow QRS']},
+ {id:'vpaced',cat:'Pacemakers',n:'Ventricular paced rhythm',al:['ventricular paced rhythm','ventricular paced','ventricular pacing','v paced','vvi'],near:['apaced','avpaced','idio'],
+  tip:'A pacer spike right before a WIDE QRS. The wire is in the ventricle, so the beat spreads cell to cell like a PVC.',look:['Spike right before each QRS','Wide QRS','Regular, set rate']},
+ {id:'avpaced',cat:'Pacemakers',n:'AV (dual-chamber) paced rhythm',al:['av paced rhythm','av paced','av pacing','dual chamber paced','dual chamber pacing','av sequential pacing','atrial and ventricular paced','atrial and ventricular pacing','dual paced','ddd'],near:['apaced','vpaced'],
+  tip:'Two spikes per beat: one before the P, one before the wide QRS. It mimics the normal sequence.',look:['Spike before the P','Second spike before a wide QRS']},
+ {id:'failcap',cat:'Pacemakers',n:'Pacemaker failure to capture',al:['failure to capture','loss of capture','non capture','noncapture','failed capture'],near:['failsense','failpace'],
+  tip:'The pacer fires (spike) but nothing follows. Capture = a beat after the spike. Causes: battery, lead problems, MA set too low.',look:['Pacer spikes at the set rate','Some spikes have no QRS after them']},
+ {id:'failsense',cat:'Pacemakers',n:'Pacemaker failure to sense',al:['failure to sense','undersensing','under sensing','sensing failure'],near:['failcap','failpace'],
+  tip:'The pacer ignores the patient\'s own beats and fires anyway, so spikes land in odd places (on the ST or T).',look:['The patient\'s own beats present','Spikes at a fixed rate anyway','Spikes on ST segments or T waves']},
+ {id:'failpace',cat:'Pacemakers',n:'Pacemaker failure to pace',al:['failure to pace','failure to fire','pacemaker failure to pace','oversensing','over sensing','failure to output'],near:['failcap','failsense','sarrest'],
+  tip:'The pacer should fire but doesn\'t: a pause with NO spike and no beat.',look:['Paced beats','Then a pause with no spike','Pacing resumes']},
+ // ---- 12-lead findings
+ {id:'lad',cat:'Axis & hypertrophy',twelve:1,n:'Left axis deviation',al:['left axis deviation','left axis','lad'],near:['rad','lafb','lvh'],
+  tip:'Lead I up, aVF down: the QRSs are "Leaving" each other = Left. Axis 0 to -90.',look:['Lead I mostly positive','aVF mostly negative']},
+ {id:'rad',cat:'Axis & hypertrophy',twelve:1,n:'Right axis deviation',al:['right axis deviation','right axis','rad'],near:['lad','lpfb','rvh'],
+  tip:'Lead I down, aVF up: the QRSs are "Reaching" for each other = Right. Axis +90 to 180.',look:['Lead I mostly negative','aVF mostly positive']},
+ {id:'rae',cat:'Axis & hypertrophy',twelve:1,n:'Right atrial enlargement (P pulmonale)',al:['right atrial enlargement','rae','p pulmonale'],near:['lae','rvh'],
+  tip:'Tall, peaked P over 2.5 mm in II, III, aVF; same width. Pulmonale = Pointy.',look:['Tall peaked P in II, III, aVF','Tall upright P in V1','Normal P width']},
+ {id:'lae',cat:'Axis & hypertrophy',twelve:1,n:'Left atrial enlargement (P mitrale)',al:['left atrial enlargement','lae','p mitrale'],near:['rae','lvh'],
+  tip:'Wide, notched "M" P in II (Mitrale = M). In V1 the end of the P dips at least 1 mm and lasts 0.04 s.',look:['Wide notched P in II','Deep negative end of the P in V1']},
+ {id:'rvh',cat:'Axis & hypertrophy',twelve:1,n:'Right ventricular hypertrophy',al:['right ventricular hypertrophy','rvh'],near:['rbbb','rad','postmi'],
+  tip:'In V1 the R is bigger than the S (normally the opposite). In V6 the S is bigger than the R. Right axis deviation.',look:['R bigger than S in V1','S bigger than R in V6','Right axis deviation']},
+ {id:'lvh',cat:'Axis & hypertrophy',twelve:1,n:'Left ventricular hypertrophy',al:['left ventricular hypertrophy','lvh','lvh with strain'],near:['bvh','lbbb','lad'],
+  tip:'Huge voltages: S in V1 or V2 + R in V5 or V6 over 35 mm. Often "strain" (ST down, T inverted) in V5-V6.',look:['Deep S in V1-V2','Tall R in V5-V6 (and aVL)','Strain pattern laterally']},
+ {id:'bvh',cat:'Axis & hypertrophy',twelve:1,n:'Biventricular hypertrophy',al:['biventricular hypertrophy','bi ventricular hypertrophy','bvh','biventricular'],near:['lvh','rvh'],
+  tip:'Signs of both: tall R in V1 AND tall R in V5-V6, big biphasic RS complexes in V2-V4, often right axis.',look:['Tall R in V1','Tall R in V5-V6','Big RS complexes mid-chest']},
+ {id:'rbbb',cat:'Conduction blocks',twelve:1,n:'Right bundle branch block (RBBB)',al:['right bundle branch block','rbbb','right bundle'],near:['irbbb','bifasc','lbbb','rvh'],
+  tip:'QRS over 0.12 s with rSR\' "rabbit ears" in V1-V2 and a wide slurred S in I and V6.',look:['QRS 0.12 s or wider','rSR\' in V1-V2','Wide S in I, V6']},
+ {id:'irbbb',cat:'Conduction blocks',twelve:1,n:'Incomplete right bundle branch block',al:['incomplete right bundle branch block','incomplete rbbb','irbbb','incomplete right bundle'],near:['rbbb','ivcd'],
+  tip:'The rabbit ears in V1 are there, but the QRS isn\'t wide yet (0.10-0.12 s).',look:['rSR\' in V1','QRS 0.10-0.12 s']},
+ {id:'lbbb',cat:'Conduction blocks',twelve:1,n:'Left bundle branch block (LBBB)',al:['left bundle branch block','lbbb','left bundle'],near:['rbbb','ivcd','lvh'],
+  tip:'QRS over 0.12 s, deep wide S (QS) in V1, broad notched R in I, aVL, V5, V6. ST and T go the opposite way to the QRS.',look:['QRS 0.12 s or wider','QS in V1','Broad notched R in I, V6']},
+ {id:'lafb',cat:'Conduction blocks',twelve:1,n:'Left anterior fascicular block (left anterior hemiblock)',al:['left anterior fascicular block','left anterior hemiblock','lafb','lahb','anterior hemiblock','anterior fascicular block','incomplete lbbb anterior','left anterior fascicle block'],near:['lad','lpfb','bifasc'],
+  tip:'Normal-width QRS with left axis deviation: qR in I and aVL, rS in II, III, aVF. No other cause of LAD.',look:['Left axis deviation','qR in I, aVL','rS in II, III, aVF']},
+ {id:'lpfb',cat:'Conduction blocks',twelve:1,n:'Left posterior fascicular block (left posterior hemiblock)',al:['left posterior fascicular block','left posterior hemiblock','lpfb','lphb','posterior hemiblock','posterior fascicular block','incomplete lbbb posterior','left posterior fascicle block'],near:['rad','lafb','rvh'],
+  tip:'Normal-width QRS with right axis deviation: rS in I and aVL, qR in II, III, aVF. No other cause of RAD.',look:['Right axis deviation','rS in I, aVL','qR in II, III, aVF']},
+ {id:'bifasc',cat:'Conduction blocks',twelve:1,n:'Bifascicular block (RBBB + left anterior hemiblock)',al:['bifascicular block','bifascicular','rbbb with left anterior hemiblock','rbbb and lafb','rbbb lafb','rbbb with lafb','rbbb plus lafb','rbbb and left anterior hemiblock'],near:['rbbb','lafb'],
+  tip:'RBBB in the chest leads PLUS left axis deviation in the limb leads. Only one fascicle is still conducting.',look:['rSR\' in V1','Left axis deviation','Wide QRS']},
+ {id:'ivcd',cat:'Conduction blocks',twelve:1,n:'Nonspecific intraventricular conduction delay',al:['nonspecific intraventricular conduction delay','non specific intraventricular conduction delay','intraventricular conduction delay','ivcd','nonspecific conduction delay','nonspecific bundle branch block','non specific bbb','nonspecific bbb'],near:['rbbb','lbbb','irbbb'],
+  tip:'The QRS is wide, but it doesn\'t fit the RBBB or LBBB pattern.',look:['Wide QRS everywhere','No rabbit ears in V1','No broad notched R in V6']},
+ {id:'infmi',cat:'Ischemia & infarction',twelve:1,n:'Inferior MI (STEMI)',al:['inferior mi','inferior stemi','inferior infarct','inferior wall mi','inferior myocardial infarction','inferior infarction','inferior wall infarction','inferior wall stemi'],near:['rvmi','latmi','oldmi'],
+  tip:'ST elevation in II, III, aVF (RCA), with reciprocal ST depression in I and aVL.',look:['ST up in II, III, aVF','ST down in I, aVL']},
+ {id:'latmi',cat:'Ischemia & infarction',twelve:1,n:'Lateral MI (STEMI)',al:['lateral mi','lateral stemi','lateral infarct','lateral wall mi','lateral myocardial infarction','lateral infarction','lateral wall infarction','lateral wall stemi'],near:['almi','infmi'],
+  tip:'ST elevation in I, aVL, V5, V6 (circumflex), reciprocal ST depression inferiorly.',look:['ST up in I, aVL, V5, V6','ST down in II, III, aVF']},
+ {id:'antmi',cat:'Ischemia & infarction',twelve:1,n:'Anterior MI (STEMI)',al:['anterior mi','anterior stemi','anterior infarct','anterior wall mi','anterior myocardial infarction','anterior infarction','anterior wall infarction','anterior wall stemi'],near:['asmi','almi','hyperacute'],
+  tip:'ST elevation in V2-V4 (LAD).',look:['ST up in V2, V3, V4','Reciprocal changes inferiorly']},
+ {id:'asmi',cat:'Ischemia & infarction',twelve:1,n:'Anteroseptal MI (STEMI)',al:['anteroseptal mi','anteroseptal stemi','anteroseptal infarct','anteroseptal infarction','anteroseptal myocardial infarction','septal mi','septal infarct'],near:['antmi','almi'],
+  tip:'ST elevation in V1-V4 (LAD), often with QS complexes in V1-V2.',look:['ST up in V1-V4','QS in V1-V2']},
+ {id:'almi',cat:'Ischemia & infarction',twelve:1,n:'Anterolateral MI (STEMI)',al:['anterolateral mi','anterolateral stemi','anterolateral infarct','anterolateral infarction','anterolateral myocardial infarction'],near:['antmi','latmi','asmi'],
+  tip:'Anterior + lateral: ST elevation in I, aVL and V3-V6 (LAD and circumflex).',look:['ST up in I, aVL','ST up in V3-V6','ST down inferiorly']},
+ {id:'postmi',cat:'Ischemia & infarction',twelve:1,n:'Posterior MI',al:['posterior mi','posterior stemi','posterior infarct','posterior wall mi','posterior myocardial infarction','posterior infarction','posterior wall infarction'],near:['rvh','antmi'],
+  tip:'The mirror image of an anterior MI, seen from the front: ST DEPRESSION with tall R waves and upright T in V1-V3. RCA or circumflex.',look:['ST depression in V1-V3','Tall R in V1-V2','Upright T']},
+ {id:'rvmi',cat:'Ischemia & infarction',twelve:1,n:'Right ventricular infarction',al:['right ventricular infarct','right ventricular infarction','rv infarct','rv infarction','right ventricular mi','rv mi','inferior mi with rv involvement'],near:['infmi','asmi'],
+  tip:'Looks like an inferior MI, PLUS ST elevation in V1; V2\'s ST is smaller or even depressed. RCA.',look:['ST up in II, III, aVF','ST up in V1','V2 smaller or depressed']},
+ {id:'oldmi',cat:'Ischemia & infarction',twelve:1,n:'Old MI (pathologic Q waves)',al:['old mi','old inferior mi','old infarct','prior mi','previous mi','old myocardial infarction','pathologic q waves','pathological q waves','q waves','old inferior infarct'],near:['infmi','tinv'],
+  tip:'Deep, wide Q waves (over 0.04 s, at least 1/3 the R) with a flat ST: the permanent scar. Here in II, III, aVF.',look:['Big Q waves in II, III, aVF','ST back to baseline']},
+ {id:'hyperacute',cat:'Ischemia & infarction',twelve:1,n:'Hyperacute T waves (earliest MI)',al:['hyperacute t waves','hyperacute t wave','hyperacute t','hyperacute'],near:['hyperk','antmi'],
+  tip:'The first minutes of an MI: tall, broad T waves in the affected leads. Hyperkalemia Ts are narrow and pointed; hyperacute Ts are broad.',look:['Tall, broad T in V2-V4','Little or no ST elevation yet']},
+ {id:'tinv',cat:'Ischemia & infarction',twelve:1,n:'Ischemia (T wave inversion)',al:['ischemia','myocardial ischemia','t wave inversion','t wave inversions','inverted t waves','ischemic t wave inversion','lateral ischemia'],near:['oldmi','lvh','cns'],
+  tip:'Symmetric inverted T waves in leads where T should be upright (here I, aVL, V4-V6). Symmetric = more likely pathologic.',look:['Symmetric T inversion laterally','QRS normal width']},
+ {id:'erepol',cat:'Ischemia & infarction',twelve:1,n:'Early repolarization (J-point elevation)',al:['early repolarization','benign early repolarization','j point elevation','j point','early repol'],near:['antmi','pericarditis'],
+  tip:'Very common and benign: the J point is up with a little notch, but the T keeps its own shape. In an MI the ST bows up and merges with the T.',look:['Mild ST elevation in V2-V5','Notch at the J point','T wave keeps its own shape']},
+ {id:'pericarditis',cat:'Other 12-lead findings',twelve:1,n:'Pericarditis',al:['pericarditis','acute pericarditis'],near:['erepol','infmi','antmi'],
+  tip:'Diffuse, saddle-shaped (concave) ST elevation in almost every lead, plus PR depression. aVR is the opposite. Not limited to one artery\'s territory.',look:['ST up in most leads, concave','PR depression','aVR: ST down, PR up']},
+ {id:'pe',cat:'Other 12-lead findings',twelve:1,n:'Acute pulmonary embolism (S1Q3)',al:['pulmonary embolism','acute pulmonary embolism','acute pe','pe','s1q3','s1q3t3','s1 q3','s1 q3 t3'],near:['rbbb','irbbb','stach'],
+  tip:'S1Q3: a big S in lead I and a deep Q (with inverted T) in lead III, often sinus tach and RBBB from right heart strain.',look:['Deep S in lead I','Q and inverted T in lead III','Sinus tach, rSR\' in V1']},
+ {id:'copd',cat:'Other 12-lead findings',twelve:1,n:'COPD pattern',al:['copd','chronic obstructive pulmonary disease','emphysema','low voltage','copd pattern'],near:['rad','rae','rvh'],
+  tip:'Low voltage everywhere, right axis deviation, and tall P waves (RAE) from the strained right heart.',look:['Small QRSs in every lead','Right axis','Tall P in II, III, aVF']},
+ {id:'cns',cat:'Other 12-lead findings',twelve:1,n:'CNS event (cerebral T waves)',al:['cns','cns event','cerebral t waves','cva','sah','subarachnoid hemorrhage','intracranial hemorrhage','stroke','increased intracranial pressure','intracranial bleed'],near:['tinv','hypok'],
+  tip:'After a severe stroke or SAH: deep, wide inverted T waves across many leads, U waves, a long QT, often bradycardia (Cushing\'s triad).',look:['Deep, wide T inversion everywhere','U waves','Long QT, slow rate']},
+ {id:'brugada',cat:'Other 12-lead findings',twelve:1,n:'Brugada pattern',al:['brugada','brugada syndrome','brugada pattern'],near:['rbbb','erepol','asmi'],
+  tip:'An RBBB-like pattern with "coved" ST elevation in V1-V2 that slopes down into an inverted T. A sudden-death risk.',look:['Coved ST elevation in V1-V2','Inverted T after it','Rest of the leads normal']},
 ];
 const byId=Object.fromEntries(R.map(r=>[r.id,r]));
 
@@ -252,6 +350,74 @@ const PVC=()=>({pol:pick([1,-1]),w:rand(0.13,0.17),amp:rand(1.1,1.5),s:rand(0.25
 function sinus(S,rate,o={},from=-1,to=T+1){const rr=60/rate;let t=from+RNG()*rr;while(t<to){beat(S,t,{p:'norm',rr,...o});t+=rr}}
 function bg(S,f,k){const m=k==='atr'?L.a:k==='v'?L.vf:1;for(let i=0;i<N;i++)S[i]+=m*f(i/FS)}
 
+// ---- 12-lead pathology engine: per-lead beat specs
+let LD='II';
+const isL=(...a)=>a.includes(LD);
+function nsp(o){const L0=LEADS[LD];return Object.assign({p:[[0,.022,L0.p]],pr:.16,qrs:[[.012,.007,L0.q],[.036,.0095,L0.r],[.06,.009,L0.s]],qd:.09,t:[null,L0.t,.055,.036],st:0,conv:0},o||{})}
+function plat(S,a,b,lvl,r1=.015,r2=.05){const i0=Math.max(0,Math.floor((a-r1)*FS)),i1=Math.min(N-1,Math.ceil((b+r2)*FS));for(let i=i0;i<=i1;i++){const t=i/FS;const w=t<a?.5-.5*Math.cos(Math.PI*(t-(a-r1))/r1):t>b?.5+.5*Math.cos(Math.PI*(t-b)/r2):1;S[i]+=lvl*w}}
+function beat2(S,q0,b,rr){
+  if(b.p){const pc=q0-b.pr+.05;b.p.forEach(x=>G(S,pc+x[0],x[1],x[2]));if(b.prd)plat(S,pc+.04,q0-.01,b.prd,.01,.01)}
+  b.qrs.forEach(x=>G(S,q0+x[0],x[1],x[2]));
+  const qt=Math.min(.46,Math.max(.3,.4*Math.sqrt(rr)))+(b.qd-.09),tp=q0+(b.t[0]!=null?b.t[0]:qt-.07);
+  if(b.st)plat(S,q0+b.qd-.005,tp-.02,b.st);
+  if(b.conv)G(S,(q0+b.qd+tp)/2,.04,b.conv);
+  AG(S,tp,b.t[1],b.t[2],b.t[3]);
+  if(b.u)G(S,q0+qt+b.u[0],b.u[1],b.u[2]);
+  (b.xtra||[]).forEach(x=>G(S,q0+x[0],x[1],x[2]));
+}
+const TW=(lo,hi,fn)=>S=>{const rr=60/ri(lo,hi);let t=RNG()*rr;while(t<T+1){beat2(S,t,fn(),rr);t+=rr}};
+const spike=(S,t)=>G(S,t,.0025,1.6);
+const PRE=['V1','V2','V3','V4','V5','V6'];
+function rbbbS(qd,rp,sl){const L0=LEADS[LD];
+  if(LD==='V1')return nsp({qd,qrs:[[.02,.009,.3],[.05,.011,-.55],[qd-.04,.016,rp]],t:[null,-.25,.06,.04]});
+  if(LD==='V2')return nsp({qd,qrs:[[.02,.009,.35],[.05,.012,-.7],[qd-.04,.016,rp*.8]],t:[null,-.15,.06,.04]});
+  if(LD==='aVR')return nsp({qd,qrs:[[.03,.01,.1],[.06,.012,-.6],[qd-.04,.02,.3]]});
+  return nsp({qd,qrs:[[.012,.007,L0.q],[.036,.0105,L0.r],[.06,.009,L0.s*.5],[qd-.045,.024,sl]]})}
+function lbbbS(){const qd=.15;
+  if(isL('V1','V2','V3')){const s={V1:-1.5,V2:-1.8,V3:-1.3}[LD];return nsp({qd,qrs:[[.02,.008,.1],[.07,.032,s]],st:.15,t:[null,.45,.06,.045]})}
+  if(LD==='V4')return nsp({qd,qrs:[[.04,.02,.5],[.1,.025,-.7]],st:.05,t:[null,.2,.06,.04]});
+  if(isL('I','aVL','V5','V6')){const r={I:.7,aVL:.6,V5:1.0,V6:.9}[LD];return nsp({qd,qrs:[[.04,.02,r*.85],[qd-.05,.02,r]],st:-.1,t:[null,-.3,.06,.04]})}
+  if(LD==='aVR')return nsp({qd,qrs:[[.06,.03,-.7]],st:.08,t:[null,.2,.06,.04]});
+  if(LD==='II')return nsp({qd,qrs:[[.04,.02,.45],[qd-.05,.02,.5]],t:[null,-.1,.06,.04]});
+  return nsp({qd,qrs:[[.05,.025,LD==='III'?-.3:.3]],t:[null,.05,.06,.04]})}
+const QR=(a)=>a.map(x=>x.slice());
+function lafbS(){const m={I:[[.012,.007,-.09],[.04,.01,.7]],aVL:[[.012,.007,-.1],[.04,.01,.8]],II:[[.02,.009,.3],[.055,.011,-.6]],III:[[.02,.009,.15],[.055,.011,-.85]],aVF:[[.02,.009,.2],[.055,.011,-.7]]};
+  return m[LD]?nsp({qd:.1,qrs:QR(m[LD]),t:[null,isL('I','aVL')?.2:-.05,.055,.036]}):nsp()}
+function lpfbS(){const m={I:[[.02,.009,.2],[.05,.011,-.5]],aVL:[[.02,.009,.15],[.05,.011,-.55]],II:[[.012,.007,-.06],[.04,.01,1.0]],III:[[.012,.007,-.12],[.04,.01,1.1]],aVF:[[.012,.007,-.1],[.04,.01,1.0]]};
+  return m[LD]?nsp({qd:.1,qrs:QR(m[LD]),t:[null,isL('II','III','aVF')?.25:.05,.055,.036]}):nsp()}
+function bifS(){if(PRE.includes(LD))return rbbbS(.14,.85,-.3);
+  const m={I:[[.012,.007,-.08],[.04,.011,.65],[.1,.024,-.3]],aVL:[[.012,.007,-.09],[.04,.011,.75],[.1,.024,-.25]],II:[[.02,.009,.3],[.06,.012,-.6],[.11,.02,-.2]],III:[[.02,.009,.15],[.06,.012,-.85],[.11,.02,-.2]],aVF:[[.02,.009,.2],[.06,.012,-.7],[.11,.02,-.2]],aVR:[[.03,.01,.1],[.06,.012,-.5],[.1,.02,.35]]};
+  return nsp({qd:.14,qrs:QR(m[LD]),t:[null,isL('I','aVL')?.15:.05,.06,.04]})}
+function ladS(){const m={I:[[.012,.007,-.05],[.036,.0095,.85],[.06,.009,-.1]],aVL:[[.012,.007,-.04],[.036,.0095,.7],[.06,.009,-.12]],II:[[.02,.009,.45],[.05,.01,-.5]],III:[[.02,.009,.15],[.05,.01,-.85]],aVF:[[.02,.009,.2],[.05,.01,-.7]]};
+  return m[LD]?nsp({qrs:QR(m[LD]),t:[null,isL('I','aVL')?.22:.05,.055,.036]}):nsp()}
+function radS(){const m={I:[[.02,.009,.15],[.05,.01,-.6]],aVL:[[.02,.009,.1],[.05,.01,-.6]],II:[[.012,.007,-.05],[.036,.0095,1.0],[.06,.009,-.15]],III:[[.012,.007,-.05],[.036,.0095,1.1],[.06,.009,-.1]],aVF:[[.012,.007,-.06],[.036,.0095,1.1],[.06,.009,-.1]]};
+  return m[LD]?nsp({qrs:QR(m[LD]),t:[null,isL('I','aVL')?.05:.3,.055,.036]}):nsp()}
+function raeS(){if(isL('II','III','aVF'))return nsp({p:[[0,.017,LD==='III'?.27:.3]]});if(LD==='V1')return nsp({p:[[0,.016,.18]]});return nsp()}
+function laeS(){const L0=LEADS[LD],k=L0.p/.15;if(LD==='V1')return nsp({pr:.2,p:[[-.03,.015,.06],[.025,.026,-.13]]});return nsp({pr:.2,p:[[-.028,.018,.12*k],[.03,.018,.13*k]]})}
+function rvhS(){const m={V1:[[.035,.01,1.0],[.065,.009,-.3]],V2:[[.035,.01,.9],[.065,.01,-.6]],V3:[[.035,.01,.8],[.065,.01,-.8]],V5:[[.03,.009,.5],[.06,.011,-.8]],V6:[[.03,.009,.4],[.06,.011,-.8]],I:[[.02,.009,.15],[.05,.01,-.55]],aVL:[[.02,.009,.1],[.05,.01,-.5]],II:[[.012,.007,-.05],[.036,.0095,.9],[.06,.009,-.15]],III:[[.012,.007,-.05],[.036,.0095,1.0],[.06,.009,-.1]],aVF:[[.012,.007,-.05],[.036,.0095,1.0],[.06,.009,-.1]]};
+  const t={V1:-.25,V2:-.15,I:.08,aVL:.05}[LD];return m[LD]?nsp({qrs:QR(m[LD]),t:[null,t!=null?t:LEADS[LD].t,.06,.04]}):nsp()}
+function lvhS(){const m={V1:[[.02,.008,.15],[.055,.012,-2.0]],V2:[[.02,.008,.25],[.055,.012,-2.3]],V3:[[.03,.01,.6],[.06,.012,-1.6]],V4:[[.036,.011,1.6],[.065,.01,-.6]],V5:[[.012,.007,-.06],[.038,.011,2.2],[.065,.009,-.1]],V6:[[.012,.007,-.06],[.038,.011,1.9],[.065,.009,-.05]],aVL:[[.012,.007,-.05],[.038,.011,1.25],[.065,.009,-.1]],I:[[.012,.007,-.05],[.038,.011,1.3],[.065,.009,-.1]]};
+  if(!m[LD])return nsp();const strain=isL('V5','V6','aVL','I');return nsp({qrs:QR(m[LD]),st:strain?(isL('V5','V6')?-.12:-.06):0,t:[null,strain?(isL('V5','V6')?-.3:-.12):(isL('V1','V2')?.3:.4),.06,.04]})}
+function bvhS(){const m={V1:[[.035,.01,.8],[.065,.01,-.6]],V2:[[.035,.01,1.2],[.065,.011,-1.4]],V3:[[.035,.01,1.6],[.065,.011,-1.6]],V4:[[.035,.01,1.7],[.065,.011,-1.2]],V5:[[.012,.007,-.06],[.038,.011,2.0],[.065,.009,-.4]],V6:[[.012,.007,-.06],[.038,.011,1.7],[.065,.009,-.3]],I:[[.02,.009,.25],[.05,.01,-.5]],III:[[.012,.007,-.05],[.036,.0095,1.0],[.06,.009,-.1]],aVF:[[.012,.007,-.05],[.036,.0095,1.0],[.06,.009,-.1]]};
+  return m[LD]?nsp({qrs:QR(m[LD])}):nsp()}
+function steS(lvl){const L0=LEADS[LD];return nsp({qrs:[[.012,.007,L0.q],[.036,.0095,L0.r*.8],[.06,.009,L0.s*.7]],st:lvl,conv:.05,t:[null,Math.max(.45,L0.t+.2),.06,.045]})}
+const recipS=()=>nsp({st:-.15,t:[null,-.08,.055,.036]});
+const qsSTE=()=>nsp({qrs:[[.03,.012,.08],[.055,.012,-1.0]],st:.3,conv:.05,t:[null,.5,.06,.045]});
+function miS(ste,rec,qs){return ()=>{if(qs&&qs.includes(LD))return qsSTE();if(ste.includes(LD))return steS(isL('I','aVL')?.22:.3);if(rec.includes(LD))return recipS();return nsp()}}
+function postS(){if(isL('V1','V2'))return nsp({qrs:[[.035,.011,.9],[.065,.009,-.35]],st:-.22,t:[null,.35,.06,.04]});if(LD==='V3')return nsp({qrs:[[.035,.011,.9],[.065,.01,-.5]],st:-.15,t:[null,.4,.06,.04]});return nsp()}
+function rvmiS(){if(LD==='V1')return steS(.25);if(LD==='V2')return nsp({st:-.08});return miS(['II','III','aVF'],['I','aVL'])()}
+function oldS(){const L0=LEADS[LD];if(isL('II','III','aVF'))return nsp({qrs:[[.02,.013,-.5],[.052,.01,L0.r*.55],[.07,.009,-.05]],t:[null,L0.t*.5,.055,.036]});return nsp()}
+function hyperS(){if(isL('V2','V3','V4'))return nsp({st:.05,t:[null,1.0,.08,.06]});if(LD==='V5')return nsp({t:[null,.6,.07,.05]});return nsp()}
+function tinvS(){if(isL('I','aVL','V4','V5','V6'))return nsp({st:-.03,t:[null,-.35,.05,.05]});return nsp()}
+function erS(){if(isL('V2','V3','V4','V5','II'))return nsp({st:.12,t:[null,LEADS[LD].t+.2,.06,.045],xtra:[[.085,.008,.15]]});return nsp()}
+function periS(){if(LD==='aVR')return nsp({st:-.12,prd:.06});if(LD==='V1')return nsp({st:.04});if(LD==='III')return nsp({st:.05,prd:-.03});return nsp({st:.16,prd:-.06})}
+function peS(){if(LD==='I')return nsp({qrs:[[.012,.007,-.02],[.036,.0095,.5],[.065,.012,-.5]]});if(LD==='III')return nsp({qrs:[[.015,.009,-.3],[.04,.01,.45],[.065,.009,-.1]],t:[null,-.18,.055,.036]});
+  if(LD==='V1')return nsp({qd:.11,qrs:[[.02,.009,.2],[.05,.011,-.45],[.085,.013,.4]],t:[null,-.2,.06,.04]});if(isL('V2','V3'))return nsp({t:[null,-.12,.055,.036]});return nsp()}
+function copdS(){const b=nsp();b.qrs=b.qrs.map(x=>[x[0],x[1],x[2]*.38]);b.t=[null,b.t[1]*.5,.055,.036];
+  if(LD==='I')b.qrs=[[.02,.009,.08],[.05,.01,-.22]];if(isL('II','III','aVF'))b.p=[[0,.018,.24]];return b}
+function cnsS(){if(LD==='aVR')return nsp({t:[0.44,.3,.09,.08]});return nsp({t:[0.44,LD==='V1'?-.25:-.6,.09,.08],u:[.14,.045,.14]})}
+function brugS(){if(LD==='V1')return nsp({qd:.11,qrs:[[.02,.009,.2],[.05,.011,-.5],[.09,.012,.45]],st:.35,conv:.06,t:[null,-.3,.06,.05]});
+  if(LD==='V2')return nsp({qd:.11,qrs:[[.02,.009,.3],[.05,.011,-.8],[.09,.012,.5]],st:.3,conv:.05,t:[null,-.2,.06,.05]});if(LD==='V3')return nsp({st:.08});return nsp()}
 const GEN={
   nsr:S=>sinus(S,ri(62,95)),
   sbrady:S=>sinus(S,ri(38,54)),
@@ -274,7 +440,7 @@ const GEN={
   trigem:S=>{const rr=60/ri(66,80),sh=PVC();let t=rand(-0.2,0.3);while(t<T+1){beat(S,t,{p:'norm',rr});beat(S,t+rr,{p:'norm',rr});beat(S,t+rr*1.6,{wide:sh});t+=rr*3}},
   idio:S=>{const rr=60/ri(30,42),sh=PVC();sh.w=rand(0.16,0.2);let t=rand(0.1,rr);while(t<T+1){beat(S,t,{wide:sh});t+=rr}},
   vt:S=>{const rr=60/ri(150,210),sh=PVC();sh.w=rand(0.14,0.17);sh.amp=rand(1.0,1.3);sh.t=0.5;let t=rand(0,rr);while(t<T+1){beat(S,t,{wide:sh});t+=rr}},
-  vf:S=>{const c=[...Array(5)].map(()=>({f:rand(3.5,7),p:rand(0,6),a:rand(0.12,0.28)})),m=rand(0.5,1.2);bg(S,t=>c.reduce((s,x)=>s+x.a*Math.sin(2*Math.PI*x.f*t+x.p),0)*(0.65+0.35*Math.sin(2*Math.PI*t/m)),'v')},
+  vf:S=>{const FV=RNG()<.4?.3:1,c=[...Array(5)].map(()=>({f:rand(3.5,7),p:rand(0,6),a:rand(0.12,0.28)*FV})),m=rand(0.5,1.2);bg(S,t=>c.reduce((s,x)=>s+x.a*Math.sin(2*Math.PI*x.f*t+x.p),0)*(0.65+0.35*Math.sin(2*Math.PI*t/m)),'v')},
   tdp:S=>{const f=rand(3.6,4.4),per=rand(2.2,2.8),ph=rand(0,3);bg(S,t=>{const env=0.95*Math.sin(Math.PI*(t+ph)/per*2)+0.08,x=Math.sin(2*Math.PI*f*t);return env*Math.sign(x)*Math.pow(Math.abs(x),0.7)},'v')},
   afib:S=>{fwaves(S,0.085);let t=rand(0,0.4);while(t<T+1){const rr=rand(0.42,1.05);beat(S,t,{p:null,rr,tAmp:0.22});t+=rr}},
   aflut:S=>{const f=rand(4.7,5.2),ph=rand(0,1),cond=pick([2,4,4,3]),fw=1/f;bg(S,t=>{const x=((t*f+ph)%1+1)%1;return 0.1-0.36*(x<0.78?x/0.78:(1-x)/0.22)},'atr');
@@ -296,10 +462,36 @@ const GEN={
   hypoca:S=>sinus(S,ri(62,80),{qt:0.54}),
   hypotherm:S=>{sinus(S,ri(38,50),{j:1});if(RNG()<0.6)bg(S,t=>0.035*Math.sin(2*Math.PI*9.3*t)*Math.max(0,Math.sin(2*Math.PI*t/2.3)))},
   dig:S=>sinus(S,ri(60,80),{pr:0.22,dig:1}),
+  sss:S=>{const r1=60/ri(140,170);let t=rand(.05,.2);const stop=rand(2.2,2.8);while(t<stop){beat(S,t,{p:null,rr:r1,tAmp:.18});t+=r1}t+=rand(1.6,2.0);const r2=60/ri(40,48);while(t<T+1){beat(S,t,{p:'norm',rr:r2});t+=r2}},
+  aescape:S=>{const rr=60/ri(68,82);let t=rand(.1,.4);const stop=rand(1.5,2.2);while(t<stop){beat(S,t,{p:'norm',rr});t+=rr}t+=rand(.55,.75);beat(S,t,{p:'abn',pr:.14,rr});t+=rr*rand(1.0,1.1);while(t<T+1){beat(S,t,{p:'norm',rr});t+=rr}},
+  vescape:S=>{const rr=60/ri(68,82),sh=PVC();sh.w=rand(.15,.18);let t=rand(.1,.4);const stop=rand(1.5,2.2);while(t<stop){beat(S,t,{p:'norm',rr});t+=rr}t+=rand(.8,1.0);beat(S,t,{wide:sh});t+=rr*rand(1.15,1.3);while(t<T+1){beat(S,t,{p:'norm',rr});t+=rr}},
+  aivr:S=>{const rr=60/ri(55,95),sh=PVC();sh.w=rand(.15,.18);let t=rand(.1,rr);while(t<T+1){beat(S,t,{wide:sh});t+=rr}},
+  accjunc:S=>{const inv=RNG()<.5;sinus(S,ri(62,98),inv?{p:'inv',pr:.07}:{p:null})},
+  junctach:S=>{const inv=RNG()<.5;sinus(S,ri(105,150),inv?{p:'inv',pr:.07,tAmp:.22}:{p:null,tAmp:.22})},
+  quadrigem:S=>{const rr=60/ri(66,80),sh=PVC();let t=rand(-.2,.3);while(t<T+1){beat(S,t,{p:'norm',rr});beat(S,t+rr,{p:'norm',rr});beat(S,t+2*rr,{p:'norm',rr});beat(S,t+rr*2.6,{wide:sh});t+=rr*4}},
+  couplet:S=>{const rr=60/ri(66,80),sh=PVC();let t=rand(.1,.5),k=0;const hit=ri(2,3);while(t<T+1){k++;if(k===hit){const e=t-rr+rr*.6;beat(S,e,{wide:sh});beat(S,e+rr*.55,{wide:sh});t=e+rr*.55+rr*1.4}beat(S,t,{p:'norm',rr});t+=rr}},
+  ront:S=>{const rr=60/ri(70,84),sh=PVC();let t=rand(.1,.5),k=0;const hit=ri(3,4);while(t<T+1){k++;beat(S,t,{p:'norm',rr});if(k===hit){beat(S,t+qtFor(rr)-.1,{wide:sh});t+=rr*2}else t+=rr}},
+  polyvt:S=>{const rr=60/ri(180,230);let t=rand(0,rr);while(t<T+1){beat(S,t,{wide:{pol:pick([1,-1]),w:rand(.11,.18),amp:rand(.7,1.5),s:rand(.2,.5),t:rand(.25,.45)}});t+=rr*rand(.9,1.1)}},
+  psvtwpw:S=>{const rr=60/ri(170,220);let t=rand(0,rr);while(t<T+1){beat(S,t,{p:null,rr,tAmp:.2,ret:1});t+=rr}},
+  avb21:S=>{const rr=60/ri(80,100),pr=rand(.16,.19);let t=rand(-.2,.3),k=0;while(t<T+1){if(k%2===0)beat(S,t,{p:'norm',pr,rr:rr*2});else P(S,t-pr+.05,'norm');t+=rr;k++}},
+  apaced:S=>{const rr=60/ri(60,80);let t=rand(.2,rr);while(t<T+1){spike(S,t-.18+.05-.05);beat(S,t,{p:'norm',pr:.18,rr});t+=rr}},
+  vpaced:S=>{const rr=60/ri(60,72),sh={pol:-1,w:.16,amp:1.2,s:.3,t:.45};let t=rand(.2,rr);while(t<T+1){spike(S,t-.01);beat(S,t,{wide:sh});t+=rr}},
+  avpaced:S=>{const rr=60/ri(60,75),sh={pol:-1,w:.16,amp:1.2,s:.3,t:.45};let t=rand(.3,rr);while(t<T+1){spike(S,t-.17);P(S,t-.12,'norm');spike(S,t-.01);beat(S,t,{wide:sh});t+=rr}},
+  failcap:S=>{const rr=60/ri(60,72),sh={pol:-1,w:.16,amp:1.2,s:.3,t:.45};let t=rand(.2,rr*.6),k=0;const miss=new Set([ri(2,3),ri(5,6)]);while(t<T+1){k++;spike(S,t-.01);if(!miss.has(k))beat(S,t,{wide:sh});t+=rr}},
+  failsense:S=>{sinus(S,ri(72,86));const pr=60/ri(58,66);let t=rand(.1,pr);while(t<T+1){spike(S,t);t+=pr}},
+  failpace:S=>{const rr=60/ri(62,72),sh={pol:-1,w:.16,amp:1.2,s:.3,t:.45};let t=rand(.2,rr*.6),k=0;const gap=ri(3,4);while(t<T+1){k++;if(k===gap){t+=rr*rand(1.6,2.2);continue}spike(S,t-.01);beat(S,t,{wide:sh});t+=rr}},
+  lad:TW(64,88,ladS), rad:TW(64,88,radS), rae:TW(70,95,raeS), lae:TW(62,85,laeS), rvh:TW(70,95,rvhS), lvh:TW(60,85,lvhS), bvh:TW(70,95,bvhS),
+  rbbb:TW(62,88,()=>rbbbS(.14,1.1,-.32)), irbbb:TW(62,88,()=>rbbbS(.11,.45,-.18)), lbbb:TW(62,88,lbbbS), lafb:TW(62,88,lafbS), lpfb:TW(62,88,lpfbS), bifasc:TW(62,88,bifS),
+  ivcd:TW(62,88,()=>{const L0=LEADS[LD];return nsp({qd:.13,qrs:[[.02,.014,L0.q],[.06,.022,L0.r*.9],[.11,.018,L0.s*.9]],t:[null,L0.t*.8,.06,.04]})}),
+  infmi:TW(62,92,miS(['II','III','aVF'],['I','aVL'])), latmi:TW(62,92,miS(['I','aVL','V5','V6'],['II','III','aVF'])),
+  antmi:TW(62,92,miS(['V2','V3','V4'],['II','III','aVF'])), asmi:TW(62,92,miS(['V1','V2','V3','V4'],['II','III','aVF'],['V1','V2'])),
+  almi:TW(62,92,miS(['I','aVL','V3','V4','V5','V6'],['II','III','aVF'])), postmi:TW(62,92,postS), rvmi:TW(58,85,rvmiS),
+  oldmi:TW(62,85,oldS), hyperacute:TW(62,90,hyperS), tinv:TW(62,88,tinvS), erepol:TW(55,80,erS),
+  pericarditis:TW(88,110,periS), pe:TW(105,125,peS), copd:TW(85,105,copdS), cns:TW(48,58,cnsS), brugada:TW(62,85,brugS),
 };
 function fwaves(S,a){const c=[...Array(3)].map(()=>({f:rand(5,8),p:rand(0,6)}));bg(S,t=>a*c.reduce((s,x)=>s+Math.sin(2*Math.PI*x.f*t+x.p),0)/1.6,'atr')}
 function makeLead(id,lead,seed,dur){
-  T=dur;N=Math.round(T*FS);L=LEADS[lead];RNG=mulberry(seed);
+  T=dur;N=Math.round(T*FS);L=LEADS[lead];LD=lead;RNG=mulberry(seed);
   const S=new Float32Array(N);GEN[id](S);RNG=Math.random;
   const w=rand(0.15,0.3),wp=rand(0,6),wa=rand(0.02,0.05);
   for(let i=0;i<N;i++){const t=i/FS;S[i]+=wa*Math.sin(2*Math.PI*w*t+wp)+(Math.random()-0.5)*0.022}
@@ -313,7 +505,7 @@ function cssVar(n){return getComputedStyle(document.documentElement).getProperty
 const LAYOUT=[['I','aVR','V1','V4'],['II','aVL','V2','V5'],['III','aVF','V3','V6']];
 function draw(){
   if(!SIG)return;
-  const tw=FMT==='12',dur=tw?10:6,mmW=10+dur*25,mmH=tw?124:42,minW=tw?960:640;
+  const tw=FMT==='12',dur=tw?10:6,mmW=10+dur*25,mmH=tw?132:42,minW=tw?960:640;
   cv.style.minWidth=minW+'px';
   const cssW=Math.max(minW,cv.parentElement.clientWidth),px=cssW/mmW,cssH=Math.round(mmH*px),dpr=window.devicePixelRatio||1;
   cv.style.height=cssH+'px';cv.width=Math.round(cssW*dpr);cv.height=Math.round(cssH*dpr);
@@ -339,11 +531,11 @@ function draw(){
   c.strokeStyle=trc;c.fillStyle=trc;c.lineWidth=1.3;c.lineJoin='round';
   c.font=`600 ${Math.max(11,Math.round(3.4*px))}px ${cssVar('--f-mono')||'monospace'}`;
   for(let r=0;r<4;r++){
-    const base=(4+r*30+17)*px;c.beginPath();cal(base);
+    const base=(6+r*30+20)*px;c.beginPath();cal(base);
     if(r<3)LAYOUT[r].forEach((ld,k)=>{const xs=x0+k*62.5*px;
       if(k){c.moveTo(xs,base-3.5*px);c.lineTo(xs,base+3.5*px)}
-      trace(SIG[ld],k*2.5,(k+1)*2.5,xs,base,-1.45,1.45);c.fillText(ld,xs+1.5*px,base-10.5*px)});
-    else{trace(SIG.II,0,10,x0,base,-1.45,1.45);c.fillText('II',x0+1.5*px,base-10.5*px)}
+      trace(SIG[ld],k*2.5,(k+1)*2.5,xs,base,-1.7,2.4);c.fillText(ld,xs+1.5*px,base-10.5*px)});
+    else{trace(SIG.II,0,10,x0,base,-1.7,2.4);c.fillText('II',x0+1.5*px,base-10.5*px)}
     c.stroke();
   }
 }
@@ -387,7 +579,7 @@ function renderCats(){
 }
 function load(id,isStudy){
   CUR=byId[id];study=!!isStudy;done=study;last=id;
-  FMT=ST.fmt==='12'?'12':ST.fmt==='strip'?'strip':(Math.random()<0.3?'12':'strip');
+  FMT=CUR.twelve||ST.fmt==='12'?'12':ST.fmt==='strip'?'strip':(Math.random()<0.3?'12':'strip');
   const seed=Math.floor(Math.random()*1e9),dur=FMT==='12'?10:6;SIG={};
   for(const ld of (FMT==='12'?Object.keys(LEADS):['II']))SIG[ld]=makeLead(id,ld,seed,dur);
   cv.setAttribute('aria-label',FMT==='12'?'12-lead EKG':'EKG rhythm strip');draw();
@@ -396,7 +588,7 @@ function load(id,isStudy){
   if(study)showAnswer(null,null);
 }
 function next(){
-  let pool=R.filter(r=>ST.cats.includes(r.cat)&&r.id!==last);if(!pool.length)pool=R;
+  let pool=R.filter(r=>ST.cats.includes(r.cat)&&r.id!==last&&!(ST.fmt==='strip'&&r.twelve));if(!pool.length)pool=R;
   load(pick(pool).id,false);
 }
 function showAnswer(verdict,you){
