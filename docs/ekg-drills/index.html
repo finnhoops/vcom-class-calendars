@@ -79,6 +79,12 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid
 .pilelist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
 .pi{display:flex;justify-content:space-between;gap:10px;font-size:.92rem;border-top:1px solid var(--line);padding-top:6px}
 .pi span{font-family:var(--f-mono);font-size:.8rem;color:var(--muted);white-space:nowrap}
+.sg{margin:12px 0 4px;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.sr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;border-top:1px solid var(--line);padding:7px 0;font-size:.92rem}
+.sr .num{font-family:var(--f-mono);font-size:.8rem;color:var(--muted);white-space:nowrap;text-align:right}
+.sr .bar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--field);overflow:hidden}
+.sr .bar i{display:block;height:100%}
+.sr button{font:inherit;font-size:.8rem;font-weight:700;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:6px;padding:3px 8px;cursor:pointer;justify-self:start}
 .pilemsg{font-size:.9rem;font-weight:700;color:var(--accent)}
 @media (prefers-reduced-motion:no-preference){.fb{animation:rise .2s ease-out}@keyframes rise{from{transform:translateY(4px)}to{transform:none}}}
 </style>
@@ -98,6 +104,11 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid
       <p class="note">Rhythms you missed (or used Show answer on) and rhythms you mixed them up with. Get one right twice to clear it.</p>
       <div id="pileList" class="pilelist"></div>
       <button class="b ghost" type="button" id="pileClear">Empty the pile</button>
+    </details>
+    <details id="strDet"><summary id="strSum">Where you're struggling</summary>
+      <p class="note">A running record of every strip you've answered. It doesn't reset when you clear the pile.</p>
+      <div id="strList"></div>
+      <button class="b ghost" type="button" id="strReset">Reset this record</button>
     </details>
   </section>
   <details class="panel" id="topics">
@@ -574,16 +585,28 @@ function match(input){
 }
 
 // ================= STATE =================
-const ST={cats:CATS.slice(),fmt:'mix',mode:'all',pile:{}},SC={ok:0,n:0,st:0};
+const ST={cats:CATS.slice(),fmt:'mix',mode:'all',pile:{},hist:{}},SC={ok:0,n:0,st:0};
 try{Object.assign(ST,JSON.parse(localStorage.getItem('ekg-set')||'{}'))}catch(e){}
 try{Object.assign(SC,JSON.parse(localStorage.getItem('ekg-sc')||'{}'))}catch(e){}
 ST.cats=ST.cats.filter(c=>CATS.includes(c));if(!ST.cats.length)ST.cats=CATS.slice();
-if(!ST.pile||typeof ST.pile!=='object')ST.pile={};for(const k in ST.pile)if(!byId[k])delete ST.pile[k];if(ST.mode!=='pile')ST.mode='all';
+if(!ST.pile||typeof ST.pile!=='object')ST.pile={};if(!ST.hist||typeof ST.hist!=='object')ST.hist={};for(const k in ST.hist)if(!byId[k])delete ST.hist[k];for(const k in ST.pile)if(!byId[k])delete ST.pile[k];if(ST.mode!=='pile')ST.mode='all';
 const save=()=>{try{localStorage.setItem('ekg-set',JSON.stringify(ST));localStorage.setItem('ekg-sc',JSON.stringify(SC))}catch(e){}};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let CUR=null,done=false,study=false,last=null,fromPile=false;
 const pileIds=()=>Object.keys(ST.pile).filter(k=>byId[k]);
+function rec(id,ok){const h=ST.hist[id]||(ST.hist[id]={n:0,ok:0});h.n++;if(ok)h.ok++}
+function renderStruggle(){
+  const ids=Object.keys(ST.hist).filter(k=>byId[k]);
+  const col=a=>a>=.8?'var(--good)':a>=.5?'var(--warn)':'var(--bad)';
+  const row=(name,h,btn)=>{const a=h.ok/h.n,miss=h.n-h.ok;return `<div class="sr"><b>${esc(name)}</b><span class="num">${Math.round(a*100)}% · ${h.ok}/${h.n} right${miss?` · ${miss} missed`:''}</span><div class="bar"><i style="width:${Math.max(4,a*100)}%;background:${col(a)}"></i></div>${btn||''}</div>`};
+  const weak=ids.filter(k=>ST.hist[k].ok<ST.hist[k].n).sort((a,b)=>(ST.hist[a].ok/ST.hist[a].n-ST.hist[b].ok/ST.hist[b].n)||((ST.hist[b].n-ST.hist[b].ok)-(ST.hist[a].n-ST.hist[a].ok)));
+  const cats=CATS.map(c=>{const hs=ids.filter(k=>byId[k].cat===c).map(k=>ST.hist[k]);return {c,n:hs.reduce((x,h)=>x+h.n,0),ok:hs.reduce((x,h)=>x+h.ok,0)}}).filter(x=>x.n).sort((a,b)=>a.ok/a.n-b.ok/b.n);
+  $('#strSum').textContent=`Where you're struggling (${weak.length})`;
+  $('#strList').innerHTML=!ids.length?'<p class="note">Nothing yet. Answer some strips and your weak spots show up here.</p>':
+    '<h3 class="sg">By topic, weakest first</h3>'+cats.map(x=>row(x.c,x)).join('')+
+    '<h3 class="sg">Rhythms you\'ve missed, weakest first</h3>'+(weak.length?weak.map(k=>row(byId[k].n,ST.hist[k],`<button type="button" data-drill="${k}">Add to redo pile</button>`)).join(''):'<p class="note">You haven\'t missed any yet.</p>');
+}
 function addPile(id,need){const e=ST.pile[id]||(ST.pile[id]={miss:0,need:0});e.miss++;e.need=Math.max(e.need,need)}
 function renderPile(){
   const ids=pileIds();
@@ -645,14 +668,15 @@ $('#ans').addEventListener('submit',e=>{
   PMSG='';
   if(!done){SC.n++;if(ok){SC.ok++;SC.st++}else SC.st=0;done=true;
     if(!study){
+      rec(CUR.id,ok);
       if(ok){const e=ST.pile[CUR.id];if(e){e.need--;if(e.need<=0){delete ST.pile[CUR.id];PMSG='Cleared from your redo pile.'}else PMSG=`Nice. Get it right ${e.need} more time${e.need>1?'s':''} to clear it from your pile.`}}
       else{addPile(CUR.id,2);let m='Added to your redo pile.';if(id&&byId[id]&&id!==CUR.id){addPile(id,1);m=`Added to your redo pile, along with ${byId[id].n} so you practice telling them apart.`}PMSG=m}
     }
-    save();renderScore();renderPile()}
+    save();renderScore();renderPile();renderStruggle()}
   showAnswer(ok?'ok':close?'close':'no',txt+(id&&!ok?` (${byId[id].n})`:''));PMSG='';
   $('#fb').scrollIntoView({behavior:'smooth',block:'nearest'});
 });
-$('#b-show').onclick=()=>{PMSG='';if(!done){SC.n++;SC.st=0;done=true;if(!study){addPile(CUR.id,2);PMSG='Added to your redo pile.'}save();renderScore();renderPile()}showAnswer(null,null);PMSG=''};
+$('#b-show').onclick=()=>{PMSG='';if(!done){SC.n++;SC.st=0;done=true;if(!study){addPile(CUR.id,2);rec(CUR.id,false);PMSG='Added to your redo pile.'}save();renderScore();renderPile();renderStruggle()}showAnswer(null,null);PMSG=''};
 $('#pileClear').onclick=()=>{const b=$('#pileClear');if(b.dataset.c){ST.pile={};ST.mode='all';delete b.dataset.c;b.textContent='Empty the pile';save();renderPile()}else{b.dataset.c=1;b.textContent='Tap again to empty it'}};
 $('#b-next').onclick=()=>{next();$('#guess').focus({preventScroll:true})};
 
@@ -661,7 +685,9 @@ $('#names').innerHTML=R.map(r=>`<option value="${esc(r.n)}">`).join('');
 $('#ref').innerHTML=CATS.map(c=>`<div class="refgroup"><h3>${c}</h3>${R.filter(r=>r.cat===c).map(r=>`<div class="refrow"><b>${esc(r.n)}</b><button type="button" data-id="${r.id}">See a strip</button><p>${r.tip}</p></div>`).join('')}</div>`).join('');
 $('#ref').addEventListener('click',e=>{const b=e.target.closest('button[data-id]');if(!b)return;load(b.dataset.id,true);window.scrollTo({top:0,behavior:'smooth'})});
 
-renderCats();renderScore();renderPile();next();
+$('#strList').addEventListener('click',e=>{const b=e.target.closest('button[data-drill]');if(!b)return;addPile(b.dataset.drill,2);save();renderPile();b.textContent='Added';b.disabled=true});
+$('#strReset').onclick=()=>{const b=$('#strReset');if(b.dataset.c){ST.hist={};delete b.dataset.c;b.textContent='Reset this record';save();renderStruggle()}else{b.dataset.c=1;b.textContent='Tap again to erase the record'}};
+renderCats();renderScore();renderPile();renderStruggle();next();
 </script>
 
 </body>
