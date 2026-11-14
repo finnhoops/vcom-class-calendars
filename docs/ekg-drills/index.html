@@ -214,7 +214,7 @@ const R=[
  {id:'lgl',cat:'Pre-excitation',n:'Lown-Ganong-Levine (LGL)',al:['lown ganong levine','lown ganong levine syndrome','lgl','lgl syndrome'],near:['wpw'],
   tip:'Short PR but NO delta wave and a normal narrow QRS. Trick: LGL = Little Gap, Looks normal.',look:['PR under 0.12 s','No delta wave','Normal narrow QRS']},
  {id:'afwpw',cat:'Pre-excitation',n:'Atrial fibrillation with WPW',al:['atrial fibrillation with wpw','afib with wpw','afib and wpw','afib wpw','wpw with afib','wpw and afib','wpw afib','pre excited afib','preexcited afib','atrial fibrillation with wolff parkinson white'],near:['afib','wpw','vt'],
-  tip:'Irregularly irregular like A-fib, but very fast (often over 200) with wide QRSs that change shape from beat to beat.',look:['Irregularly irregular','Very fast rate','Wide QRSs of varying width and shape']},
+  tip:'A-fib racing down the accessory pathway: irregularly irregular and VERY fast (often over 200), mostly wide, bizarre beats with a slurred (delta-wave) upstroke that vary in width and height, plus a few narrow normal-looking beats mixed in. Can degenerate into V-fib.',look:['Irregularly irregular, very fast','Mostly wide beats with a slurred upstroke, varying size','A few narrow beats mixed in']},
  // ---- electrolytes & drugs
  {id:'hyperk',cat:'Electrolytes & drugs',n:'Hyperkalemia',al:['hyperkalemia','hyperkalaemia','hyper k','high potassium','high k'],near:['hypok'],
   tip:'Tall, narrow, peaked "tented" T waves. As K rises further, the P flattens and the QRS widens.',look:['Tall, pointed T waves','Small or flat P waves','QRS may be widening']},
@@ -462,7 +462,12 @@ const GEN={
     const vr=60/ri(32,45),wide=RNG()<0.5,sh=PVC();sh.w=0.16;let q=rand(0.2,vr);while(q<T+1){beat(S,q,wide?{wide:sh}:{p:null,rr:vr});q+=vr}},
   wpw:S=>sinus(S,ri(64,90),{pr:0.1,delta:1}),
   lgl:S=>sinus(S,ri(66,95),{pr:0.09}),
-  afwpw:S=>{fwaves(S,0.03);let t=rand(0,0.3);while(t<T+1){const rr=rand(0.24,0.42),pol=RNG()<0.85?1:-1;beat(S,t,{wide:{pol,w:rand(0.09,0.16),amp:rand(0.8,1.5),s:rand(0.2,0.4),t:rand(0.25,0.4)}});t+=rr}},
+  afwpw:S=>{fwaves(S,0.05);const pol=L.w>=0?1:-1,k=Math.abs(L.w)||0.6;let t=rand(0.1,0.4);
+    while(t<T+1){const r=RNG();
+      if(r<0.14){beat(S,t,{p:null,rr:.4,tAmp:.15});t+=rand(0.42,0.62);continue}
+      const w=rand(0.09,0.15),a=rand(1.2,2.0)*k*pol,pre=r<0.24?0.55:1;
+      AG(S,t+w*0.62,a*pre,w*0.42,0.014);G(S,t+w*0.62+0.035,0.016,-0.3*a*pre);AG(S,t+w+0.11,-0.3*a*pre,0.045,0.05);
+      t+=RNG()<0.12?rand(0.42,0.6):rand(0.2,0.34)}},
   hyperk:S=>sinus(S,ri(66,88),{pAmp:0.07,peak:1,rw:0.013}),
   hypok:S=>sinus(S,ri(66,88),{tAmp:0.07,u:1,std:-0.05}),
   hyperca:S=>sinus(S,ri(66,84),{qt:0.28}),
