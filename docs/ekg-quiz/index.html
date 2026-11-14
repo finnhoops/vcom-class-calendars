@@ -485,7 +485,7 @@ const save=()=>{try{localStorage.setItem('ekgquiz2',JSON.stringify(ST))}catch(e)
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const topicsOn=()=>Object.keys(T).filter(k=>grp(k)===ST.test&&ST.topics.includes(k));
 const inTest=i=>grp(Q[i][0])===ST.test&&ST.topics.includes(Q[i][0]);
-const everMissed=()=>ids.filter(i=>inTest(i)&&(ST.stats[i]||{}).miss>0&&!(ST.stats[i]||{}).fixed);
+const everMissed=()=>ids.filter(i=>inTest(i)&&(ST.stats[i]||{}).miss>0&&!(ST.stats[i]||{}).fixed&&!(ST.stats[i]||{}).skip);
 function startRound(list,round){ST.queue=shuffle(list);ST.pos=0;ST.right=0;ST.round=round;ST.roundMiss=[];save();render()}
 function newTest(){startRound(ST.mode==='missed'?everMissed():ids.filter(inTest),1)}
 let cur=null;
@@ -543,20 +543,25 @@ function answer(i){
   const q=Q[cur.qi],o=cur.opts[i],s=ST.stats[cur.qi]||(ST.stats[cur.qi]={seen:0,miss:0,fixed:false});
   s.seen++;
   if(o.ok){ST.right++;if(s.miss&&(ST.round>1||ST.mode==='missed'))s.fixed=true}
-  else{s.miss++;s.fixed=false;if(!ST.roundMiss.includes(cur.qi))ST.roundMiss.push(cur.qi)}
+  else{s.miss++;s.fixed=false;if(!s.skip&&!ST.roundMiss.includes(cur.qi))ST.roundMiss.push(cur.qi)}
   document.querySelectorAll('.opt').forEach((b,j)=>{b.disabled=true;if(cur.opts[j].ok)b.classList.add('right');if(j===i&&!o.ok)b.classList.add('wrong')});
   const fb=$('#fb');fb.hidden=false;
   fb.innerHTML=`<div class="verdict ${o.ok?'ok':'no'}">${o.ok?'Correct':'Not quite'}</div>`+
     (o.ok?'':`<p class="why"><b>Why that's wrong:</b> ${esc(o.why)}</p><p class="why"><strong>Answer:</strong> ${esc(q[2])}</p>`)+
+    (o.ok?'':`<div class="row"><button class="b ghost" type="button" id="skip">${s.skip?'Skipped. It won\'t come back as a miss':'Skip it: I don\'t care about this one'}</button></div>`)+
     `<p class="src">${esc(q[3])}</p><div class="row"><button class="b primary" type="button" id="next">${ST.pos+1>=ST.queue.length?'Finish round':'Next question'}</button></div>`;
   ST.pos++;save();renderStats();renderMissed();
   const nx=$('#next');nx.onclick=()=>{render();window.scrollTo({top:0,behavior:'smooth'})};nx.focus({preventScroll:true});
+  const sk=$('#skip');if(sk)sk.onclick=()=>{s.skip=true;ST.roundMiss=ST.roundMiss.filter(x=>x!==cur.qi);save();renderStats();renderMissed();sk.textContent='Skipped. It won\'t come back as a miss';sk.disabled=true};
   $('#barfill').style.width=(ST.pos/ST.queue.length*100)+'%';
   $('#progress').textContent=`${ST.round>1?`Retry round ${ST.round} · `:''}Question ${ST.pos} of ${ST.queue.length} · ${ST.right} right so far`;
 }
 function renderMissed(){
-  const list=ids.filter(i=>grp(Q[i][0])===ST.test&&(ST.stats[i]||{}).miss>0).sort((a,b)=>(ST.stats[a].fixed-ST.stats[b].fixed)||(ST.stats[b].miss-ST.stats[a].miss));
+  const list=ids.filter(i=>grp(Q[i][0])===ST.test&&(ST.stats[i]||{}).miss>0&&!ST.stats[i].skip).sort((a,b)=>(ST.stats[a].fixed-ST.stats[b].fixed)||(ST.stats[b].miss-ST.stats[a].miss));
   $('#missed').innerHTML=list.length?list.map(i=>{const s=ST.stats[i];return `<div class="mi"><span class="cnt">Missed ${s.miss}×${s.fixed?' · since gotten right':''}</span><p><strong>${esc(Q[i][1])}</strong></p><p>${esc(Q[i][2])}</p></div>`}).join(''):'<p class="note">Nothing yet. Questions you get wrong show up here.</p>';
+  const sk=ids.filter(i=>grp(Q[i][0])===ST.test&&(ST.stats[i]||{}).skip);
+  if(sk.length){$('#missed').insertAdjacentHTML('beforeend',`<p class="note" style="margin-top:14px"><b>Skipped (${sk.length})</b>: you said you don't care about these, so they stay out of retries and review.</p>`+sk.map(i=>`<div class="mi"><p>${esc(Q[i][1])}</p><button class="chip" type="button" data-unskip="${i}">Undo skip</button></div>`).join(''));
+    $('#missed').querySelectorAll('[data-unskip]').forEach(b=>b.onclick=()=>{ST.stats[+b.dataset.unskip].skip=false;save();renderStats();renderMissed();renderControls()})}
 }
 $('#resetAll').onclick=()=>{const b=$('#resetAll');if(b.dataset.c){ST.stats={};ST.mode='all';delete b.dataset.c;b.textContent='Reset all progress';newTest()}else{b.dataset.c=1;b.textContent='Tap again to erase everything'}};
 document.addEventListener('keydown',e=>{if(!cur)return;const k=e.key.toUpperCase();if(!cur.answered&&k.length===1&&'ABCD'.includes(k)){const i='ABCD'.indexOf(k);if(i<cur.opts.length)answer(i)}else if(cur.answered&&e.key==='Enter'){const n=$('#next');if(n&&document.activeElement!==n)n.click()}});
