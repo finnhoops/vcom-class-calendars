@@ -553,7 +553,7 @@ function draw(){
     c.strokeStyle=cssVar('--tick');c.lineWidth=1.6;
     for(let s=0;s<=6;s++)line(x0+s*25*px,0,x0+s*25*px,2.5*px);
     c.strokeStyle=trc;c.lineWidth=1.5;c.lineJoin='round';c.beginPath();
-    const base=26*px;cal(base);trace(SIG.II,0,6,x0,base,-1.6,2.5);c.stroke();return;
+    const base=26*px;cal(base);trace(SIG.II,0,6,x0,base,-1.6,2.5);c.stroke();c.fillStyle=trc;c.font=`600 ${Math.max(12,Math.round(3.6*px))}px ${cssVar('--f-mono')||'monospace'}`;c.fillText('II',x0+1.5*px,7.5*px);return;
   }
   c.strokeStyle=trc;c.fillStyle=trc;c.lineWidth=1.3;c.lineJoin='round';
   c.font=`600 ${Math.max(11,Math.round(3.4*px))}px ${cssVar('--f-mono')||'monospace'}`;
