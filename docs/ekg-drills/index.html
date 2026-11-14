@@ -245,8 +245,6 @@ const R=[
   tip:'Quad = 4: three normal beats, then a PVC, repeating (1:3).',look:['Three normal beats, then a PVC','Repeats in groups of four']},
  {id:'couplet',cat:'Ectopic',n:'PVC couplet',al:['pvc couplet','pvc couplets','couplet','couplets','paired pvcs','pvc pair'],near:['pvcu','vt'],
   tip:'Two PVCs back to back. Couplets are one of the "rules of malignancy." Three or more in a row is V-tach.',look:['Two wide early beats in a row','Normal beats around them']},
- {id:'ront',cat:'Ectopic',n:'R-on-T PVC',al:['r on t','r on t pvc','r on t phenomenon','r on t pvcs'],near:['pvcu','couplet','tdp'],
-  tip:'A PVC that lands on the T wave of the beat before it, while the heart is repolarizing. It can set off VT or VF, so it\'s a rule of malignancy.',look:['A PVC very early','It falls on the previous T wave']},
  {id:'polyvt',cat:'Ectopic',n:'Polymorphic ventricular tachycardia',al:['polymorphic ventricular tachycardia','polymorphic vt','polymorphic v tach','polymorphic vtach'],near:['tdp','vt','vf'],
   tip:'Fast and wide like VT, but the QRSs keep changing shape. Torsades is a special polymorphic VT that twists around the baseline with a long QT.',look:['Fast wide complexes','Shapes vary beat to beat','No steady twisting pattern']},
  {id:'psvtwpw',cat:'Pre-excitation',n:'PSVT with WPW (AVRT)',al:['psvt with wpw','svt with wpw','wpw with psvt','wpw with svt','avrt','atrioventricular reentrant tachycardia','orthodromic avrt','wpw svt'],near:['psvt','wpw','afwpw'],
@@ -298,7 +296,7 @@ const R=[
   tip:'Ischemia = T wave changes only: the T peaks first (hyperacute), then inverts (symmetric). No ST elevation and no new Q waves yet. [Putting it All Together s23]',look:['Tall, broad (peaked) T waves, or','Symmetric inverted T waves','No ST elevation, no Q waves']},
 ];
 const byId=Object.fromEntries(R.map(r=>[r.id,r]));
-{const MAPN={infmi:'infarct',latmi:'infarct',antmi:'infarct',asmi:'infarct',almi:'infarct',postmi:'infarct',rvmi:'infarct',oldmi:'infarct',hyperacute:'ischemia',tinv:'ischemia',erepol:'infarct',brugada:'rbbb',irbbb:'rbbb',lafb:'lad',lpfb:'rad',bifasc:'rbbb',ivcd:'lbbb'};R.forEach(r=>{if(r.near)r.near=[...new Set(r.near.map(k=>MAPN[k]||k))].filter(k=>byId[k]&&k!==r.id)})}
+{const MAPN={infmi:'infarct',latmi:'infarct',antmi:'infarct',asmi:'infarct',almi:'infarct',postmi:'infarct',rvmi:'infarct',oldmi:'infarct',hyperacute:'ischemia',tinv:'ischemia',erepol:'infarct',brugada:'rbbb',irbbb:'rbbb',ront:'pvcu',lafb:'lad',lpfb:'rad',bifasc:'rbbb',ivcd:'lbbb'};R.forEach(r=>{if(r.near)r.near=[...new Set(r.near.map(k=>MAPN[k]||k))].filter(k=>byId[k]&&k!==r.id)})}
 
 // ================= SIGNAL =================
 const FS=250;let T=6,N=T*FS,L=null,RNG=Math.random;
