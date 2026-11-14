@@ -40,6 +40,7 @@ h3{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mu
 .sub{color:var(--muted);font-size:.9rem;margin:4px 0 0}
 .score{display:flex;gap:14px;font-family:var(--f-mono);font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .score b{color:var(--fg);font-weight:500}
+.score{align-items:center;flex-wrap:wrap}.score .big{font-size:1.05rem}.score .big b{font-weight:700;color:var(--accent)}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
 summary{cursor:pointer;font-weight:700;font-size:.95rem}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
@@ -102,7 +103,7 @@ button:focus-visible,.chip:focus-visible,summary:focus-visible{outline:2px solid
   <section class="panel pilebar">
     <div class="chips" id="modes" style="margin-top:0"></div>
     <details id="pileDet"><summary id="pileSum">Redo pile</summary>
-      <p class="note">Rhythms you missed (or used Show answer on) and rhythms you mixed them up with. Get one right twice to clear it.</p>
+      <p class="note">Rhythms you missed (or used Show answer on) and rhythms you mixed them up with. Get one right to clear it.</p>
       <div id="pileList" class="pilelist"></div>
       <button class="b ghost" type="button" id="pileClear">Empty the pile</button>
     </details>
@@ -573,11 +574,11 @@ function match(input){
 }
 
 // ================= STATE =================
-const ST={cats:CATS.slice(),fmt:'mix',mode:'all',pile:{},hist:{},skip:{}},SC={ok:0,n:0,st:0};
+const ST={cats:CATS.slice(),fmt:'mix',mode:'all',pile:{},hist:{},skip:{},done:{}},SC={ok:0,n:0,st:0};
 try{Object.assign(ST,JSON.parse(localStorage.getItem('ekg-set')||'{}'))}catch(e){}
 try{Object.assign(SC,JSON.parse(localStorage.getItem('ekg-sc')||'{}'))}catch(e){}
 ST.cats=ST.cats.filter(c=>CATS.includes(c));if(!ST.cats.length)ST.cats=CATS.slice();
-if(!ST.pile||typeof ST.pile!=='object')ST.pile={};if(!ST.hist||typeof ST.hist!=='object')ST.hist={};for(const k in ST.hist)if(!byId[k])delete ST.hist[k];for(const k in ST.pile)if(!byId[k])delete ST.pile[k];if(ST.mode!=='pile')ST.mode='all';if(!ST.skip||typeof ST.skip!=='object')ST.skip={};for(const k in ST.skip)if(!byId[k])delete ST.skip[k];
+if(!ST.pile||typeof ST.pile!=='object')ST.pile={};if(!ST.hist||typeof ST.hist!=='object')ST.hist={};for(const k in ST.hist)if(!byId[k])delete ST.hist[k];for(const k in ST.pile)if(!byId[k])delete ST.pile[k];if(ST.mode!=='pile')ST.mode='all';if(!ST.skip||typeof ST.skip!=='object')ST.skip={};for(const k in ST.skip)if(!byId[k])delete ST.skip[k];if(!ST.done||typeof ST.done!=='object')ST.done={};for(const k in ST.done)if(!byId[k])delete ST.done[k];
 const save=()=>{try{localStorage.setItem('ekg-set',JSON.stringify(ST));localStorage.setItem('ekg-sc',JSON.stringify(SC))}catch(e){}};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -608,14 +609,16 @@ function renderPile(){
   if(sk.length)$('#pileList').insertAdjacentHTML('beforeend',`<p class="note" style="margin-top:10px"><b>Skipped (${sk.length})</b>: these don't go in your pile when you miss them.</p>`+sk.map(k=>`<div class="pi"><b>${esc(byId[k].n)}</b><button class="chip" type="button" data-unskip="${k}">Undo skip</button></div>`).join(''));
   $('#pileList').querySelectorAll('[data-unskip]').forEach(b=>b.onclick=()=>{delete ST.skip[b.dataset.unskip];save();renderPile();renderStruggle()});
 }
-function renderScore(){$('#score').innerHTML=`<span>Correct <b>${SC.ok}</b>/<b>${SC.n}</b></span><span>Streak <b>${SC.st}</b></span>`}
+function renderScore(){const el=elig(),got=el.filter(r=>ST.done[r.id]).length;
+  $('#score').innerHTML=`<span class="big">Types right <b>${got}</b>/<b>${el.length}</b></span><span>Streak <b>${SC.st}</b></span><button class="chip" type="button" id="b-restart">Start over</button>`;
+  const b=$('#b-restart');b.onclick=()=>{if(b.dataset.c)restart();else{b.dataset.c=1;b.textContent='Tap again to start over'}}}
 function renderCats(){
   const el=$('#cats');el.innerHTML='';
   CATS.forEach(c=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=c;b.setAttribute('aria-pressed',ST.cats.includes(c));
-    b.onclick=()=>{if(ST.cats.includes(c)){if(ST.cats.length>1)ST.cats=ST.cats.filter(x=>x!==c)}else ST.cats.push(c);save();renderCats()};el.appendChild(b)});
+    b.onclick=()=>{if(ST.cats.includes(c)){if(ST.cats.length>1)ST.cats=ST.cats.filter(x=>x!==c)}else ST.cats.push(c);save();renderCats();renderScore()};el.appendChild(b)});
   const fm=$('#fmt');fm.innerHTML='';
   [['mix','Mix (mostly strips)'],['strip','Rhythm strips only'],['12','12-leads only']].forEach(([v,l])=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',ST.fmt===v);
-    b.onclick=()=>{ST.fmt=v;save();renderCats();next()};fm.appendChild(b)});
+    b.onclick=()=>{ST.fmt=v;save();renderCats();renderScore();next()};fm.appendChild(b)});
 }
 function load(id,isStudy){
   CUR=byId[id];study=!!isStudy;done=study;last=id;
@@ -627,17 +630,26 @@ function load(id,isStudy){
   $('#guess').value='';$('#fb').hidden=true;
   if(study)showAnswer(null,null);
 }
+const elig=()=>R.filter(r=>ST.cats.includes(r.cat)&&!(ST.fmt==='strip'&&r.twelve)&&!ST.skip[r.id]);
+const wasWrong=id=>!!ST.pile[id]||!!(ST.hist[id]&&ST.hist[id].ok<ST.hist[id].n);
 function next(){
-  const ids=pileIds().filter(k=>!(ST.fmt==='strip'&&byId[k].twelve));
-  if(ST.mode==='pile'&&!ids.length){ST.mode='all';save();renderPile();const fb=$('#fb');fb.hidden=false;fb.innerHTML='<div class="verdict ok">Pile cleared</div><p>Nothing left to redo. Back to all topics.</p>'}
-  if(ids.length&&(ST.mode==='pile'||Math.random()<0.25)){
-    let id=pick(ids.length>1?ids.filter(k=>k!==last):ids);
-    if(ST.mode==='pile'&&Math.random()<0.25){const nb=(byId[id].near||[]).filter(k=>byId[k]&&!(ST.fmt==='strip'&&byId[k].twelve));if(nb.length)id=pick(nb)}
-    fromPile=true;load(id,false);return}
-  fromPile=false;
-  let pool=R.filter(r=>ST.cats.includes(r.cat)&&r.id!==last&&!(ST.fmt==='strip'&&r.twelve));if(!pool.length)pool=R;
-  load(pick(pool).id,false);
+  const el=elig(),left=el.filter(r=>!ST.done[r.id]);
+  if(!el.length){load(pick(R).id,false);return}
+  if(!left.length){allDone(el.length);return}
+  let wrong=left.filter(r=>wasWrong(r.id)),fresh=left.filter(r=>!wasWrong(r.id));
+  if(ST.mode==='pile'){wrong=left.filter(r=>ST.pile[r.id]);
+    if(!wrong.length){ST.mode='all';save();renderPile();next();const fb=$('#fb');fb.hidden=false;fb.innerHTML='<div class="verdict ok">Pile cleared</div><p>Nothing left to redo. Back to all topics.</p>';return}}
+  let src=ST.mode==='pile'?wrong:(wrong.length&&(!fresh.length||Math.random()<0.5)?wrong:fresh);
+  if(src.length>1)src=src.filter(r=>r.id!==last);
+  const id=pick(src).id;fromPile=!!ST.pile[id];load(id,false);
 }
+function allDone(n){
+  CUR=null;done=true;study=false;$('#s-mode').hidden=true;$('#guess').value='';
+  const fb=$('#fb');fb.hidden=false;
+  fb.innerHTML=`<div class="verdict ok">You got all ${n} right!</div><p>Every rhythm in the topics you picked has been answered correctly. Start over to go through them again.</p><div class="btns"><button class="b primary" type="button" id="b-restart2">Start over</button></div>`;
+  $('#b-restart2').onclick=restart;
+}
+function restart(){ST.done={};save();renderScore();next();window.scrollTo({top:0,behavior:'smooth'})}
 let PMSG='';
 function showAnswer(verdict,you){
   const r=CUR,fb=$('#fb');fb.hidden=false;
@@ -657,7 +669,7 @@ function showAnswer(verdict,you){
   $('#b-next2').onclick=()=>{next();$('#guess').focus({preventScroll:true});window.scrollTo({top:0,behavior:'smooth'})};
 }
 $('#ans').addEventListener('submit',e=>{
-  e.preventDefault();const txt=$('#guess').value.trim();if(!txt)return;
+  e.preventDefault();if(!CUR)return;const txt=$('#guess').value.trim();if(!txt)return;
   const id=match(txt);
   if(id==='second?'){const fb=$('#fb');fb.hidden=false;fb.innerHTML=`<div class="verdict close">Which type?</div><p>Second-degree AV block has two types. Say type I (Wenckebach) or type II (Mobitz II).</p>`;return}
   if(!id&&!study){const fb=$('#fb');fb.hidden=false;fb.innerHTML=`<div class="verdict close">I didn't recognize that</div><p>Try the full rhythm name, or pick one from the suggestions as you type.</p>`;return}
@@ -666,14 +678,14 @@ $('#ans').addEventListener('submit',e=>{
   if(!done){LASTADD=[];SC.n++;if(ok){SC.ok++;SC.st++}else SC.st=0;done=true;
     if(!study){
       rec(CUR.id,ok);
-      if(ok){const e=ST.pile[CUR.id];if(e){e.need--;if(e.need<=0){delete ST.pile[CUR.id];PMSG='Cleared from your redo pile.'}else PMSG=`Nice. Get it right ${e.need} more time${e.need>1?'s':''} to clear it from your pile.`}}
+      if(ok){ST.done[CUR.id]=1;if(ST.pile[CUR.id]){delete ST.pile[CUR.id];PMSG='Cleared from your redo pile.'}}
       else{addPile(CUR.id,2);let m='Added to your redo pile.';if(id&&byId[id]&&id!==CUR.id){addPile(id,1);m=`Added to your redo pile, along with ${byId[id].n} so you practice telling them apart.`}PMSG=m}
     }
     save();renderScore();renderPile();renderStruggle()}
   showAnswer(ok?'ok':close?'close':'no',txt+(id&&!ok?` (${byId[id].n})`:''));PMSG='';
   $('#fb').scrollIntoView({behavior:'smooth',block:'nearest'});
 });
-$('#b-show').onclick=()=>{PMSG='';if(!done){LASTADD=[];SC.n++;SC.st=0;done=true;if(!study){addPile(CUR.id,2);rec(CUR.id,false);PMSG='Added to your redo pile.'}save();renderScore();renderPile();renderStruggle()}showAnswer(null,null);PMSG=''};
+$('#b-show').onclick=()=>{if(!CUR)return;PMSG='';if(!done){LASTADD=[];SC.n++;SC.st=0;done=true;if(!study){addPile(CUR.id,2);rec(CUR.id,false);PMSG='Added to your redo pile.'}save();renderScore();renderPile();renderStruggle()}showAnswer(null,null);PMSG=''};
 $('#pileClear').onclick=()=>{const b=$('#pileClear');if(b.dataset.c){ST.pile={};ST.mode='all';delete b.dataset.c;b.textContent='Empty the pile';save();renderPile()}else{b.dataset.c=1;b.textContent='Tap again to empty it'}};
 $('#b-next').onclick=()=>{next();$('#guess').focus({preventScroll:true})};
 
