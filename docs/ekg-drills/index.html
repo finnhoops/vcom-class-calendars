@@ -203,7 +203,7 @@ const R=[
  // ---- conduction blocks
  {id:'avb1',cat:'Conduction blocks',n:'First-degree AV block',al:['first degree av block','first degree heart block','first degree block','first degree'],near:['nsr','avb2i'],
   tip:'PR longer than 0.20 s (more than one big box), but every P still gets a QRS. Long, but consistent.',look:['PR over 0.20 s, same every beat','Every P followed by a QRS','Regular']},
- {id:'avb2i',cat:'Conduction blocks',n:'Second-degree AV block type I (Wenckebach)',al:['second degree av block type i','second degree type i','second degree heart block type i','type i second degree','wenckebach','wenkebach','mobitz i','mobitz type i'],near:['avb2ii','avb1'],
+ {id:'avb2i',cat:'Conduction blocks',n:'Second-degree AV block type I (Wenckebach)',al:['second degree av block type i','second degree type i','second degree heart block type i','type i second degree','wenckebach','wenkebach','mobitz i','mobitz type i','wenchebach','wenkebach'],near:['avb2ii','avb1'],
   tip:'"Longer, longer, longer, drop, then you have a Wenckebach." The PR stretches beat by beat until a QRS is dropped.',look:['PR gets longer each beat','Then a P with no QRS','Grouped beating pattern']},
  {id:'avb2ii',cat:'Conduction blocks',n:'Second-degree AV block type II (Mobitz II)',al:['second degree av block type ii','second degree type ii','second degree heart block type ii','type ii second degree','mobitz ii','mobitz type ii'],near:['avb2i','avb3'],
   tip:'"If some Ps don\'t get through, then you have a Mobitz II." The PR stays the same, then a QRS suddenly drops. More dangerous than type I.',look:['PR constant on conducted beats','Some P waves with no QRS','No warning before the drop']},
@@ -250,7 +250,7 @@ const R=[
   tip:'Fast and wide like VT, but the QRSs keep changing shape. Torsades is a special polymorphic VT that twists around the baseline with a long QT.',look:['Fast wide complexes','Shapes vary beat to beat','No steady twisting pattern']},
  {id:'psvtwpw',cat:'Pre-excitation',n:'PSVT with WPW (AVRT)',al:['psvt with wpw','svt with wpw','wpw with psvt','wpw with svt','avrt','atrioventricular reentrant tachycardia','orthodromic avrt','wpw svt'],near:['psvt','wpw','afwpw'],
   tip:'Reentry through the bundle of Kent: down the AV node, back up the accessory pathway. Narrow, regular, very fast, with an inverted P just after each QRS. The delta wave disappears.',look:['Narrow, regular, 150-250','Inverted P right after each QRS','No delta wave during the run']},
- {id:'avb21',cat:'Conduction blocks',n:'2:1 AV block',al:['2:1 av block','2:1 block','2:1 heart block','2 to 1 av block','2 to 1 block','two to one block','2:1 second degree av block','second degree av block 2:1'],near:['avb2i','avb2ii','avb3'],
+ {id:'avb21',cat:'Conduction blocks',n:'2:1 AV block',al:['2:1','2 to 1','2:1 av block','2:1 block','2:1 heart block','2 to 1 av block','2 to 1 block','two to one block','2:1 second degree av block','second degree av block 2:1'],near:['avb2i','avb2ii','avb3'],
   tip:'Every other P gets through. You can\'t tell Wenckebach from Mobitz II because you never see two PRs in a row to compare.',look:['Two P waves for every QRS','Conducted PRs all the same','Regular P-P']},
  {id:'apaced',cat:'Pacemakers',n:'Atrial paced rhythm',al:['atrial paced rhythm','atrial paced','atrial pacing','a paced','aai'],near:['vpaced','avpaced'],
   tip:'A pacer spike, then a P wave, then a normal narrow QRS. The pacemaker is in the atrium.',look:['Spike before each P','Normal narrow QRS']},
@@ -560,8 +560,8 @@ new MutationObserver(draw).observe(document.documentElement,{attributes:true,att
 // ================= ANSWERS =================
 function norm(s){
   return (' '+s.toLowerCase().replace(/°/g,' degree ').replace(/[^a-z0-9]+/g,' ')+' ')
-    .replace(/ a v /g,' av ').replace(/ (1|1st) (degree )?/g,' first degree ').replace(/ (2|2nd) (degree )?/g,' second degree ').replace(/ (3|3rd) (degree )?/g,' third degree ')
-    .replace(/ type (1|one) /g,' type i ').replace(/ type (2|two) /g,' type ii ').replace(/ mobitz (1|one) /g,' mobitz i ').replace(/ mobitz (2|two) /g,' mobitz ii ')
+    .replace(/ a v /g,' av ').replace(/ (2|two) (to )?(1|one) /g,' 2to1 ').replace(/ type (1|one) /g,' type i ').replace(/ type (2|two) /g,' type ii ').replace(/ mobitz (1|one) /g,' mobitz i ').replace(/ mobitz (2|two) /g,' mobitz ii ')
+    .replace(/ (1|1st) (degree )?/g,' first degree ').replace(/ (2|2nd) (degree )?/g,' second degree ').replace(/ (3|3rd) (degree )?/g,' third degree ')
     .replace(/ a fib /g,' afib ').replace(/ a flutter /g,' aflutter ').replace(/ v tach /g,' vtach ').replace(/ v fib /g,' vfib ')
     .replace(/ wolf /g,' wolff ').replace(/\s+/g,' ').trim();
 }
