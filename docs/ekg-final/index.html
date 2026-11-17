@@ -158,7 +158,7 @@ function render(){
   $('#nextp').textContent=ST.part===7?'Go to final mix':ST.part===FINAL?'Back to part 1':'Next part';
   renderFc();renderCk();
 }
-const FC={kind:'all',flipped:false};
+const FC={kind:'all',flipped:false,browse:false};
 const qStat=c=>c[4]==='f'?ST.stats[c[0].slice(1)]:null;
 const tScore=c=>(((qStat(c)||{}).miss)||0)+(ST.again[c[0]]||0);
 const isTrouble=c=>{const v=ST.pin[c[0]];return v===1||(v!==-1&&tScore(c)>=1)};
@@ -175,11 +175,25 @@ function renderFc(){
   const el=$('#fc'),p=ST.part,deck=deckOf(p),known=deck.filter(c=>K()[c[0]]).length,q=ST.fcq;
   const kinds=[['all','All cards'],['m','Memory tricks'],['f','Facts'],['miss','Missed']];
   const head=`<p class="eyebrow">Flashcards · ${p===FINAL?'all parts':'part '+p}</p><div class="row" style="justify-content:space-between"><h2>Flashcards</h2><span class="note">Known <b>${known}</b>/<b>${deck.length}</b></span></div>
+    <div class="row" style="margin-top:8px"><button class="b ghost" type="button" id="fcbrowse">${FC.browse?'← Back to studying':'☰ See all cards'}</button></div>
     <div class="row" style="margin-top:8px">${kinds.map(([k,l])=>`<button class="chip" type="button" data-kind="${k}" aria-pressed="${FC.kind===k}">${k==='miss'?'⚑ ':''}${l} (${CARDS.filter(c=>(p===FINAL||c[1]===p)&&kindOk(c,k)).length})</button>`).join('')}</div>`;
+  const wireHead=()=>{el.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{FC.kind=b.dataset.kind;FC.flipped=false;renderFc()});const bb=$('#fcbrowse');if(bb)bb.onclick=()=>{FC.browse=!FC.browse;renderFc();el.scrollIntoView({behavior:'smooth',block:'start'})}};
+  if(FC.browse){
+    el.innerHTML=head+`<p class="note" style="margin-top:10px">${deck.length} card${deck.length===1?'':'s'}${FC.kind==='miss'?' in your Missed pile':''}. Tap "Show answer" to check one, and ⚑ to add it to (or remove it from) your Missed pile.</p>`+
+      (deck.length?`<ol style="list-style:none;padding:0;margin:10px 0 0;display:grid;gap:10px">${deck.map(c=>`<li style="border:1px solid var(--line,#2a3a44);border-radius:12px;padding:12px 14px">
+        <div class="note" style="margin-bottom:4px">${c[4]==='m'?'Memory trick':'Fact'}${p===FINAL?' · part '+c[1]:''}${tScore(c)?' · missed '+tScore(c)+'×':''}${K()[c[0]]?' · known':''}</div>
+        <div style="font-weight:700">${esc(c[2])}</div>
+        <details style="margin-top:6px"><summary style="cursor:pointer">Show answer</summary><div style="margin-top:6px;white-space:pre-line">${esc(c[3])}</div></details>
+        <div class="row" style="margin-top:8px">${pinHtml(c[0])}</div></li>`).join('')}</ol>`:'<p style="margin-top:10px">No cards here yet.</p>');
+    wireHead();
+    el.querySelectorAll('[data-pin]').forEach(b=>b.onclick=e=>{e.stopPropagation();const id=b.dataset.pin;ST.pin[id]=isTrouble(CBY[id])?-1:1;save();
+      const on=isTrouble(CBY[id]);b.setAttribute('aria-pressed',on);b.textContent=on?'✓ In Missed pile (tap to remove)':'⚑ Add to Missed pile';
+      const ch=el.querySelector('[data-kind="miss"]');if(ch)ch.textContent='⚑ Missed ('+CARDS.filter(x=>(p===FINAL||x[1]===p)&&kindOk(x,'miss')).length+')'});
+    return}
   const active=q&&q.part===p&&q.kind===FC.kind&&q.queue.length;
   if(!active){
     const left=deck.length-known;
-    if(FC.kind==='miss'&&!deck.length){el.innerHTML=head+`<p style="margin-top:10px">Nothing here yet. Any quiz question you get wrong, or any flashcard you press "Again" on, in ${p===FINAL?'any part':'part '+p} lands here the first time you miss it. You can also add any card yourself with the ⚑ Add to Missed pile button.</p>`;el.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{FC.kind=b.dataset.kind;FC.flipped=false;renderFc()});return}
+    if(FC.kind==='miss'&&!deck.length){el.innerHTML=head+`<p style="margin-top:10px">Nothing here yet. Any quiz question you get wrong, or any flashcard you press "Again" on, in ${p===FINAL?'any part':'part '+p} lands here the first time you miss it. You can also add any card yourself with the ⚑ Add to Missed pile button.</p>`;wireHead();return}
     el.innerHTML=head+(FC.kind==='miss'?`<p class="note" style="margin-top:10px">Everything you've missed at least once, plus cards you added with ⚑. Most-missed first.</p>`:'')+(left?`<p style="margin-top:10px">${left} card${left>1?'s':''} to go. Tap a card to flip it, then say if you knew it. "Again" cards come back until you know them.</p>
       <div class="row" style="margin-top:10px"><button class="b primary" type="button" id="fcgo">${known?'Keep going':'Start flashcards'}</button>${known?'<button class="b ghost" type="button" id="fcreset">Reset this deck</button>':''}</div>`
       :`<p class="verdict ok" style="margin-top:10px">You know every card here!</p><div class="row"><button class="b ghost" type="button" id="fcreset">Reset this deck</button></div>`);
@@ -195,7 +209,7 @@ function renderFc(){
     if(FC.flipped){$('#fcagain').onclick=()=>fcMark(false);$('#fcgot').onclick=()=>fcMark(true)}
     wirePins(el,renderFc);
   }
-  el.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{FC.kind=b.dataset.kind;FC.flipped=false;renderFc()});
+  wireHead();
   const g=$('#fcgo');if(g)g.onclick=fcStart;
   const r=$('#fcreset');if(r)r.onclick=()=>{if(r.dataset.c){deck.forEach(c=>delete K()[c[0]]);ST.fcq=null;save();renderFc()}else{r.dataset.c=1;r.textContent='Tap again to reset'}};
 }
