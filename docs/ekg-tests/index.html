@@ -102,9 +102,15 @@ table.nums th{background:var(--field)}
 .rv.miss{border-color:var(--bad)}
 .tag{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .yours{color:var(--bad)} .corr{color:var(--good)}
+.fb{border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line)}
+.fb.ok{background:var(--good-bg);border-color:var(--good)} .fb.no{background:var(--bad-bg);border-color:var(--bad)}
+.fb h3{margin:0;font-size:1.15rem}
+.opt .wy{display:block;font-size:.88rem;color:var(--muted);margin-top:4px}
+.opt .mk{margin-left:auto;flex:none;font-weight:700}
+.grid button.r::before,.grid button.w::before{content:none}
 </style></head>
 <body><div class="wrap">
-<header><div><h1>EKG Practice Tests</h1><p class="sub">3 full tests · 40 questions each (30 lecture + 10 rhythm strips) · no feedback until you submit</p></div></header>
+<header><div><h1>EKG Practice Tests</h1><p class="sub">3 full tests · 40 questions each (30 lecture + 10 rhythm strips) · instant feedback after every question</p></div></header>
 <main id="app"></main>
 </div>
 <script>
@@ -133,7 +139,7 @@ function home(){
     <div class="row">${inprog?`<button class="b primary" type="button" data-resume="${t}">Resume (${Object.keys(a.ans).length}/${T.length} answered)</button><button class="b ghost" type="button" data-new="${t}">Start over</button>`
       :`<button class="b primary" type="button" data-new="${t}">${h.length?'Retake':'Start'} test ${t+1}</button>`}
       ${a&&a.done?`<button class="b ghost" type="button" data-rev="${t}">Review last attempt</button>`:''}</div></section>`}).join('')}
-    <p class="note">How it works: answer all 40, then submit. You'll get a score by lecture and a full review with why each wrong answer is wrong. Each retake shuffles the question and answer order. Your progress saves on this device.</p></div>`;
+    <p class="note">How it works: tap an answer and you'll see right away if it's right or wrong, with why the right answer is right and why each wrong choice is wrong. When you're done, submit for your score by lecture and a full review. Each retake shuffles the question and answer order. Your progress saves on this device.</p></div>`;
   document.querySelectorAll('[data-new]').forEach(b=>b.onclick=()=>{const t=+b.dataset.new;if(ST.att[t]&&!ST.att[t].done&&Object.keys(ST.att[t].ans).length&&!b.dataset.c){b.dataset.c=1;b.textContent='Tap again to erase your answers';return}newAttempt(t);go('take',t)});
   document.querySelectorAll('[data-resume]').forEach(b=>b.onclick=()=>go('take',+b.dataset.resume));
   document.querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>go('results',+b.dataset.rev));
@@ -143,19 +149,24 @@ function take(){
   const t=ST.t,T=TESTS[t],a=ST.att[t];if(!a||a.done){return home()}
   const n=T.length,qi=a.order[a.pos],q=T[qi],answered=Object.keys(a.ans).length;
   $('#app').innerHTML=`<section class="panel">
-    <div class="navrow"><p class="eyebrow">Test ${t+1} · question ${a.pos+1} of ${n}</p><p class="eyebrow">${answered}/${n} answered</p></div>
+    <div class="navrow"><p class="eyebrow">Test ${t+1} · question ${a.pos+1} of ${n}</p><p class="eyebrow">${answered}/${n} answered · ${T.filter((_,i)=>a.ans[i]===0).length} right</p></div>
     <div class="bar" aria-hidden="true"><i style="width:${answered/n*100}%"></i></div>
     <div class="qcard"><div class="qmeta"><span>${q[0]==='Strip'?'Rhythm strip':'Question'}</span><span>${a.flag[qi]?'⚑ flagged':''}</span></div>
     ${q[5]?`<a class="strip" href="${IMG(q[5])}" target="_blank" rel="noopener"><img src="${IMG(q[5])}" alt="Rhythm strip for this question"></a><p class="note">Tap the strip to open it full size.</p>`:''}
     <p class="q">${esc(q[1])}</p>
-    <div class="opts">${a.opts[qi].map((k,i)=>`<button class="opt${a.ans[qi]===k?' sel':''}" type="button" data-k="${k}" aria-pressed="${a.ans[qi]===k}"><span class="k">${'ABCD'[i]}</span><span>${esc(optText(q,k))}</span></button>`).join('')}</div>
+    <div class="opts">${a.opts[qi].map((k,i)=>{const y=a.ans[qi],done=y!==undefined;const cls=!done?'':k===0?' right':k===y?' wrong':'';
+      return `<button class="opt${cls}" type="button" data-k="${k}" ${done?'disabled':''}><span class="k">${'ABCD'[i]}</span><span>${esc(optText(q,k))}${done&&k>0?`<span class="wy">Why it's wrong: ${esc(q[4][k-1][1])}</span>`:''}</span>${done?`<span class="mk ${k===0?'corr':k===y?'yours':''}">${k===0?'✓':k===y?'✗':''}</span>`:''}</button>`}).join('')}</div>
+    ${a.ans[qi]!==undefined?(()=>{const ok=a.ans[qi]===0;return `<div class="fb ${ok?'ok':'no'}" id="fb"><h3 class="${ok?'corr':'yours'}">${ok?'✓ Correct!':'✗ Not quite'}</h3>
+      ${ok?'':`<p class="why"><span class="yours">You picked:</span> ${esc(optText(q,a.ans[qi]))}</p>`}
+      <p class="why"><span class="corr">✓ Right answer:</span> <b style="color:inherit">${esc(q[2])}</b></p>
+      <p class="why"><b style="color:inherit">Why:</b> ${esc(q[3])}</p></div>`})():''}
     <div class="navrow"><button class="b ghost" type="button" id="prev" ${a.pos===0?'disabled style="visibility:hidden"':''}>← Back</button>
       <button class="b ghost" type="button" id="flag">${a.flag[qi]?'Unflag':'⚑ Flag'}</button>
       <button class="b primary" type="button" id="next">${a.pos+1<n?'Next →':'Review & submit'}</button></div></div></section>
-    <section class="panel"><p class="eyebrow">Jump to a question</p><div class="grid">${a.order.map((x,i)=>`<button type="button" data-go="${i}" class="${a.ans[x]!==undefined?'ans':''}${i===a.pos?' cur':''}${a.flag[x]?' flg':''}" aria-label="Question ${i+1}">${i+1}</button>`).join('')}</div>
+    <section class="panel"><p class="eyebrow">Jump to a question</p><div class="grid">${a.order.map((x,i)=>`<button type="button" data-go="${i}" class="${a.ans[x]===undefined?'':a.ans[x]===0?'r':'w'}${i===a.pos?' cur':''}${a.flag[x]?' flg':''}" aria-label="Question ${i+1}">${i+1}</button>`).join('')}</div>
     <div class="row" style="margin-top:12px"><button class="b primary" type="button" id="submit">Submit test</button><button class="b ghost" type="button" id="exit">Save & exit</button></div>
     <p class="note" style="margin-top:8px" id="smsg">${n-answered?`${n-answered} unanswered.`:'All answered.'}${Object.keys(a.flag).length?` ${Object.keys(a.flag).length} flagged.`:''}</p></section>`;
-  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{a.ans[qi]=+b.dataset.k;save();take()});
+  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(a.ans[qi]!==undefined)return;a.ans[qi]=+b.dataset.k;save();take();$('#fb')?.scrollIntoView({behavior:'smooth',block:'nearest'})});
   $('#prev').onclick=()=>{if(a.pos>0){a.pos--;save();take()}};
   $('#next').onclick=()=>{if(a.pos+1<n){a.pos++;save();take();window.scrollTo({top:0})}else $('#submit').scrollIntoView({behavior:'smooth'})};
   $('#flag').onclick=()=>{if(a.flag[qi])delete a.flag[qi];else a.flag[qi]=1;save();take()};
