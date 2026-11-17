@@ -296,7 +296,7 @@ const R=[
  {id:'ischemia',cat:'Ischemia & infarction',twelve:1,n:'Ischemia',al:['ischemia','myocardial ischemia','ischemic','t wave inversion','t wave inversions','inverted t waves','hyperacute t waves','hyperacute t','hyperacute','peaked t waves','t wave peaking'],near:['infarct','hyperk','cns'],
   tip:'Ischemia = T wave changes only: the T peaks first (hyperacute), then inverts (symmetric). No ST elevation and no new Q waves yet. [Putting it All Together s23]',look:['Tall, broad (peaked) T waves, or','Symmetric inverted T waves','No ST elevation, no Q waves']},
 ];
-const DROPPED=["copd","pericarditis","sss","cns","bvh"];R.splice(0,R.length,...R.filter(r=>!DROPPED.includes(r.id)));
+const DROPPED=["copd","pericarditis","sss","cns","bvh","pe"];R.splice(0,R.length,...R.filter(r=>!DROPPED.includes(r.id)));
 const byId=Object.fromEntries(R.map(r=>[r.id,r]));
 {const MAPN={infmi:'infarct',latmi:'infarct',antmi:'infarct',asmi:'infarct',almi:'infarct',postmi:'infarct',rvmi:'infarct',oldmi:'infarct',hyperacute:'ischemia',tinv:'ischemia',erepol:'infarct',brugada:'rbbb',irbbb:'rbbb',ront:'pvcu',lafb:'lad',lpfb:'rad',bifasc:'rbbb',ivcd:'lbbb'};R.forEach(r=>{if(r.near)r.near=[...new Set(r.near.map(k=>MAPN[k]||k))].filter(k=>byId[k]&&k!==r.id)})}
 
