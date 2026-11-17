@@ -123,9 +123,9 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const byId=Object.fromEntries(QS.map(q=>[q[0],q]));
-const ST={part:1,stats:{},passed:{},quiz:null,known:{},fcq:null};
+const ST={part:1,stats:{},passed:{},quiz:null,known:{},fcq:null,again:{},mknown:{}};
 try{Object.assign(ST,JSON.parse(localStorage.getItem('ekg-final')||'{}'))}catch(e){}
-if(!ST.stats||typeof ST.stats!=='object')ST.stats={};if(!ST.known||typeof ST.known!=='object')ST.known={};if(!ST.passed||typeof ST.passed!=='object')ST.passed={};
+if(!ST.stats||typeof ST.stats!=='object')ST.stats={};if(!ST.known||typeof ST.known!=='object')ST.known={};if(!ST.passed||typeof ST.passed!=='object')ST.passed={};if(!ST.again||typeof ST.again!=='object')ST.again={};if(!ST.mknown||typeof ST.mknown!=='object')ST.mknown={};
 if(ST.quiz&&(!Array.isArray(ST.quiz.queue)||ST.quiz.queue.some(id=>!byId[id])))ST.quiz=null;
 const save=()=>{try{localStorage.setItem('ekg-final',JSON.stringify(ST))}catch(e){}};
 const FINAL=8;
@@ -159,24 +159,31 @@ function render(){
   renderFc();renderCk();
 }
 const FC={kind:'all',flipped:false};
-const deckOf=p=>CARDS.filter(c=>(p===FINAL||c[1]===p)&&(FC.kind==='all'||c[4]===FC.kind));
-function fcStart(){const d=deckOf(ST.part).filter(c=>!ST.known[c[0]]);const m=shuffle(d.filter(c=>c[4]==='m')),f=shuffle(d.filter(c=>c[4]==='f'));
-  ST.fcq={part:ST.part,kind:FC.kind,queue:[...m,...f].map(c=>c[0])};FC.flipped=false;save();renderFc()}
+const qStat=c=>c[4]==='f'?ST.stats[c[0].slice(1)]:null;
+const tScore=c=>(((qStat(c)||{}).miss)||0)+(ST.again[c[0]]||0);
+const isTrouble=c=>{const s=qStat(c);return tScore(c)>=2||!!(s&&s.miss&&!s.fixed)};
+const kindOk=(c,k)=>k==='all'||(k==='miss'?isTrouble(c):c[4]===k);
+const deckOf=p=>CARDS.filter(c=>(p===FINAL||c[1]===p)&&kindOk(c,FC.kind));
+const K=()=>FC.kind==='miss'?ST.mknown:ST.known;
+function fcStart(){const d=deckOf(ST.part).filter(c=>!K()[c[0]]);let order;
+  if(FC.kind==='miss')order=shuffle(d).sort((a,b)=>tScore(b)-tScore(a));else{const m=shuffle(d.filter(c=>c[4]==='m')),f=shuffle(d.filter(c=>c[4]==='f'));order=[...m,...f]}
+  ST.fcq={part:ST.part,kind:FC.kind,queue:order.map(c=>c[0])};FC.flipped=false;save();renderFc()}
 function renderFc(){
-  const el=$('#fc'),p=ST.part,deck=deckOf(p),known=deck.filter(c=>ST.known[c[0]]).length,q=ST.fcq;
-  const kinds=[['all','All cards'],['m','Memory tricks'],['f','Facts']];
+  const el=$('#fc'),p=ST.part,deck=deckOf(p),known=deck.filter(c=>K()[c[0]]).length,q=ST.fcq;
+  const kinds=[['all','All cards'],['m','Memory tricks'],['f','Facts'],['miss','Missed often']];
   const head=`<p class="eyebrow">Flashcards · ${p===FINAL?'all parts':'part '+p}</p><div class="row" style="justify-content:space-between"><h2>Flashcards</h2><span class="note">Known <b>${known}</b>/<b>${deck.length}</b></span></div>
-    <div class="row" style="margin-top:8px">${kinds.map(([k,l])=>`<button class="chip" type="button" data-kind="${k}" aria-pressed="${FC.kind===k}">${l} (${CARDS.filter(c=>(p===FINAL||c[1]===p)&&(k==='all'||c[4]===k)).length})</button>`).join('')}</div>`;
+    <div class="row" style="margin-top:8px">${kinds.map(([k,l])=>`<button class="chip" type="button" data-kind="${k}" aria-pressed="${FC.kind===k}">${k==='miss'?'⚑ ':''}${l} (${CARDS.filter(c=>(p===FINAL||c[1]===p)&&kindOk(c,k)).length})</button>`).join('')}</div>`;
   const active=q&&q.part===p&&q.kind===FC.kind&&q.queue.length;
   if(!active){
     const left=deck.length-known;
-    el.innerHTML=head+(left?`<p style="margin-top:10px">${left} card${left>1?'s':''} to go. Tap a card to flip it, then say if you knew it. "Again" cards come back until you know them.</p>
+    if(FC.kind==='miss'&&!deck.length){el.innerHTML=head+`<p style="margin-top:10px">Nothing here yet. This deck collects your trouble spots for ${p===FINAL?'all parts':'part '+p}: quiz questions you got wrong and haven't fixed yet, plus any card or question you've missed 2 or more times (pressing "Again" counts as a miss).</p>`;el.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{FC.kind=b.dataset.kind;FC.flipped=false;renderFc()});return}
+    el.innerHTML=head+(FC.kind==='miss'?`<p class="note" style="margin-top:10px">Your trouble spots: quiz questions you got wrong and haven't fixed, plus anything missed 2+ times. Hardest first.</p>`:'')+(left?`<p style="margin-top:10px">${left} card${left>1?'s':''} to go. Tap a card to flip it, then say if you knew it. "Again" cards come back until you know them.</p>
       <div class="row" style="margin-top:10px"><button class="b primary" type="button" id="fcgo">${known?'Keep going':'Start flashcards'}</button>${known?'<button class="b ghost" type="button" id="fcreset">Reset this deck</button>':''}</div>`
       :`<p class="verdict ok" style="margin-top:10px">You know every card here!</p><div class="row"><button class="b ghost" type="button" id="fcreset">Reset this deck</button></div>`);
   }else{
     const c=CARDS.find(x=>x[0]===q.queue[0]);
     el.innerHTML=head+`<button class="card${FC.flipped?' flipped':''}" type="button" id="fccard" aria-label="Flashcard, tap to flip">
-      ${c[4]==='m'?'<span class="kind">Memory trick</span>':''}<span class="side">${FC.flipped?'Answer':'Question'}${p===FINAL?' · part '+c[1]:''}</span>
+      ${c[4]==='m'?'<span class="kind">Memory trick</span>':''}<span class="side">${FC.flipped?'Answer':'Question'}${p===FINAL?' · part '+c[1]:''}${tScore(c)?' · missed '+tScore(c)+'×':''}</span>
       <span class="front">${esc(c[2])}</span>${FC.flipped?`<span class="back">${esc(c[3])}</span>`:'<span class="note">Tap to flip</span>'}</button>
       ${FC.flipped?`<div class="fcbtns"><button class="b bad" type="button" id="fcagain">Again</button><button class="b good" type="button" id="fcgot">Got it</button></div>`:''}
       <p class="note" style="margin-top:8px">${q.queue.length} left in this round · Space flips · 1 = Again · 2 = Got it</p>`;
@@ -185,21 +192,22 @@ function renderFc(){
   }
   el.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{FC.kind=b.dataset.kind;FC.flipped=false;renderFc()});
   const g=$('#fcgo');if(g)g.onclick=fcStart;
-  const r=$('#fcreset');if(r)r.onclick=()=>{if(r.dataset.c){deck.forEach(c=>delete ST.known[c[0]]);ST.fcq=null;save();renderFc()}else{r.dataset.c=1;r.textContent='Tap again to reset'}};
+  const r=$('#fcreset');if(r)r.onclick=()=>{if(r.dataset.c){deck.forEach(c=>delete K()[c[0]]);ST.fcq=null;save();renderFc()}else{r.dataset.c=1;r.textContent='Tap again to reset'}};
 }
 function fcMark(ok){const q=ST.fcq,id=q.queue.shift();
-  if(ok)ST.known[id]=1;else{delete ST.known[id];q.queue.splice(Math.min(3,q.queue.length),0,id)}
+  if(ok)(q.kind==='miss'?ST.mknown:ST.known)[id]=1;else{ST.again[id]=(ST.again[id]||0)+1;delete (q.kind==='miss'?ST.mknown:ST.known)[id];q.queue.splice(Math.min(3,q.queue.length),0,id)}
   FC.flipped=false;save();renderFc();if(!q.queue.length)renderFc()}
 function renderCk(){
-  const c=$('#ck'),p=ST.part,pool=poolOf(p),miss=missedIn(p).length,q=ST.quiz;
+  const c=$('#ck'),p=ST.part,pool=poolOf(p),miss=missedIn(p).length,q=ST.quiz,oft=pool.filter(x=>((ST.stats[x[0]]||{}).miss||0)>=2);
   if(!q){
     const n=p===FINAL?25:10;
     c.innerHTML=`<p class="eyebrow">${p===FINAL?'Final mix':'Checkpoint '+p}${ST.passed[p]?' · passed ✓':''}</p><h2>${p===FINAL?'Test yourself on everything':'Test yourself on part '+p}</h2>
       <p>${Math.min(n,pool.length)} questions. Missed ones come first. Get one wrong and it comes back until you get it right.</p>
       <p class="note">${pool.length} questions in this ${p===FINAL?'review':'part'}${miss?` · ${miss} you've missed before`:''}</p>
-      <div class="row" style="margin-top:10px"><button class="b primary" type="button" id="go">Start (${Math.min(n,pool.length)} questions)</button><button class="b ghost" type="button" id="goall">Every question (${pool.length})</button>${miss?`<button class="b ghost" type="button" id="gomiss">Only my misses (${miss})</button>`:''}</div>`;
+      <div class="row" style="margin-top:10px"><button class="b primary" type="button" id="go">Start (${Math.min(n,pool.length)} questions)</button><button class="b ghost" type="button" id="goall">Every question (${pool.length})</button>${miss?`<button class="b ghost" type="button" id="gomiss">Only my misses (${miss})</button>`:''}${oft.length?`<button class="b ghost" type="button" id="gooft">⚑ Missed often (${oft.length})</button>`:''}</div>`;
     $('#go').onclick=()=>start(pickSet(p,n));$('#goall').onclick=()=>start(shuffle(pool).map(x=>x[0]));
     if(miss)$('#gomiss').onclick=()=>start(shuffle(missedIn(p)).map(x=>x[0]));
+    if(oft.length)$('#gooft').onclick=()=>start(shuffle(oft).sort((a,b)=>ST.stats[b[0]].miss-ST.stats[a[0]].miss).map(x=>x[0]));
     return}
   if(q.pos>=q.queue.length){
     const missN=q.roundMiss.length;
