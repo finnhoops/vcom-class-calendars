@@ -129,6 +129,34 @@ if(!ST.stats||typeof ST.stats!=='object')ST.stats={};if(!ST.known||typeof ST.kno
 if(ST.quiz&&(!Array.isArray(ST.quiz.queue)||ST.quiz.queue.some(id=>!byId[id])))ST.quiz=null;
 const save=()=>{try{localStorage.setItem('ekg-final',JSON.stringify(ST))}catch(e){}};
 const FINAL=8;
+const MIP=9;
+const MIS=[["inferior","Inferior MI","II, III, aVF","RCA","Anterior and left lateral leads (here I and aVL)"],
+["lateral","Lateral MI","I, aVL, V5, V6","Circumflex (or left main)","Inferior leads (II, III, aVF)"],
+["anterior","Anterior MI","V2, V3, V4","LAD","Inferior leads (II, III, aVF)"],
+["anteroseptal","Anteroseptal MI","V1, V2, V3, V4","LAD","Inferior leads (II, III, aVF)"],
+["anterolateral","Anterolateral MI","I, aVL, V3, V4, V5, V6","LAD + diagonal, circumflex, marginal","Inferior leads (II, III, aVF)"],
+["posterior","Posterior MI","None directly. V1-V4 show the mirror image: ST depression + tall R, especially V1","RCA (sometimes circumflex)","Read V1-V4 upside down: the posterior wall has no lead of its own"],
+["rv","Right ventricular MI","Looks inferior (II, III, aVF) + ST elevation in V1; confirm with right-sided V4-V6","RCA","Same as inferior (here I and aVL). No nitro if an RV infarct is suspected."]];
+const MD={queue:[],shown:false,done:0};
+function miStart(){MD.queue=shuffle(MIS.map((_,i)=>i));MD.shown=false;MD.done=0}
+function renderMI(){
+  const g=$('#guide');if(!MD.queue.length&&!MD.done)miStart();
+  const head=`<p class="eyebrow">Lecture 8 · AI-generated 12-leads</p><h2>Which MI is this?</h2>`;
+  if(!MD.queue.length){g.innerHTML=head+`<p class="verdict ok" style="margin-top:10px">Done! You went through all ${MIS.length}.</p><div class="row"><button class="b primary" type="button" id="mire">Shuffle and go again</button></div>`;$('#mire').onclick=()=>{miStart();renderMI()};return}
+  const m=MIS[MD.queue[0]];
+  g.innerHTML=head+`<p class="note" style="margin-top:4px">Card ${MD.done+1} · ${MD.queue.length} left in this round. Name the wall, the leads with ST changes, the artery, and the reciprocal leads. Then tap to check.</p>
+    <a class="strip" href="mi/${m[0]}${MD.shown?'':'_q'}.jpg" target="_blank" rel="noopener" style="display:block;margin-top:10px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff"><img src="mi/${m[0]}${MD.shown?'':'_q'}.jpg" alt="12-lead EKG" style="display:block;width:100%;height:auto"></a>
+    <p class="note" style="margin-top:6px">Tap the EKG to open it full size.</p>
+    ${MD.shown?`<div class="big" style="margin-top:10px"><p style="margin:0 0 6px;font-family:var(--f-display);font-size:1.5rem;font-weight:700">${m[1]}</p>
+      <p style="margin:2px 0"><b style="color:var(--bad)">ST elevation:</b> ${m[2]}</p><p style="margin:2px 0"><b>Artery:</b> ${m[3]}</p><p style="margin:2px 0"><b style="color:var(--accent)">Reciprocal:</b> ${m[4]}</p>
+      <p class="note" style="margin-top:6px">Red solid boxes = ST elevation · blue dashed boxes = reciprocal ST depression.</p></div>
+      <div class="fcbtns"><button class="b bad" type="button" id="miagain">Again</button><button class="b good" type="button" id="migot">Got it</button></div>`
+     :`<div class="row" style="margin-top:10px"><button class="b primary" type="button" id="mishow">Show answer</button></div>`}`;
+  const s=$('#mishow');if(s)s.onclick=()=>{MD.shown=true;renderMI()};
+  const a=$('#miagain');if(a)a.onclick=()=>{const i=MD.queue.shift();MD.queue.splice(Math.min(2,MD.queue.length),0,i);MD.shown=false;renderMI();g.scrollIntoView({behavior:'smooth',block:'start'})};
+  const k=$('#migot');if(k)k.onclick=()=>{MD.queue.shift();MD.done++;MD.shown=false;renderMI();g.scrollIntoView({behavior:'smooth',block:'start'})};
+}
+
 const partName=p=>p===FINAL?'Final mix':`Part ${p}`;
 const poolOf=p=>p===FINAL?QS:QS.filter(q=>q[1]===p);
 const missedIn=p=>poolOf(p).filter(q=>(ST.stats[q[0]]||{}).miss&&!(ST.stats[q[0]]||{}).fixed);
@@ -144,7 +172,7 @@ function renderStats(){
 }
 function renderTabs(){
   const t=$('#tabs');t.innerHTML='';
-  [...PARTS.map(p=>[p.id,`${p.id}. ${p.title.split(':')[0]}`]),[FINAL,'Final mix']].forEach(([id,l])=>{
+  [...PARTS.map(p=>[p.id,`${p.id}. ${p.title.split(':')[0]}`]),[FINAL,'Final mix'],[MIP,'MI 12-leads']].forEach(([id,l])=>{
     const b=document.createElement('button');b.type='button';b.className='chip'+(ST.passed[id]?' passed':'');b.textContent=(ST.passed[id]?'✓ ':'')+l;
     b.setAttribute('aria-pressed',ST.part===id);b.onclick=()=>{goPart(id)};t.appendChild(b)});
 }
@@ -152,10 +180,12 @@ function goPart(id){ST.part=id;if(ST.quiz&&ST.quiz.part!==id)ST.quiz=null;save()
 function render(){
   renderStats();renderTabs();
   const g=$('#guide');
+  $('#fc').hidden=ST.part===MIP;$('#ck').hidden=ST.part===MIP;
+  if(ST.part===MIP){renderMI();$('#prev').disabled=false;$('#prev').style.visibility='visible';$('#nextp').textContent='Back to part 1';return}
   if(ST.part===FINAL){g.innerHTML=`<p class="eyebrow">Everything</p><h2>Final mixed review</h2><p>25 questions from all seven parts. Questions you've missed come first, then ones you haven't seen. Anything you miss comes back in a retry round until you get it right.</p><p class="note">${QS.length} questions total. ${missedIn(FINAL).length} still to review.</p>`}
   else{const p=PARTS.find(x=>x.id===ST.part);g.innerHTML=`<p class="eyebrow">Part ${p.id} · ${esc(p.tag)} · ${esc(p.lec)}</p><h2>${esc(p.title)}</h2>${p.html}`}
   $('#prev').disabled=ST.part===1;$('#prev').style.visibility=ST.part===1?'hidden':'visible';
-  $('#nextp').textContent=ST.part===7?'Go to final mix':ST.part===FINAL?'Back to part 1':'Next part';
+  $('#nextp').textContent=ST.part===7?'Go to final mix':ST.part===FINAL?'MI 12-leads':'Next part';
   renderFc();renderCk();
 }
 const FC={kind:'all',flipped:false,browse:false};
@@ -273,9 +303,9 @@ document.addEventListener('keydown',e=>{if($('#fccard')&&!e.metaKey&&!e.ctrlKey&
     if(FC.flipped&&e.key==='1'){fcMark(false);return}if(FC.flipped&&e.key==='2'){fcMark(true);return}}});
 document.addEventListener('keydown',e=>{const C=window.CUR;if(!C||!$('#ck .opts'))return;const k=e.key.toUpperCase();
   if(!C.answered&&k.length===1&&'ABCD'.includes(k)&&!e.metaKey&&!e.ctrlKey){const i='ABCD'.indexOf(k);if(i<C.opts.length)answer(i)}});
-$('#prev').onclick=()=>goPart(ST.part===FINAL?7:ST.part-1);
-$('#nextp').onclick=()=>goPart(ST.part===7?FINAL:ST.part===FINAL?1:ST.part+1);
-if(![1,2,3,4,5,6,7,FINAL].includes(ST.part))ST.part=1;
+$('#prev').onclick=()=>goPart(ST.part===MIP?FINAL:ST.part===FINAL?7:ST.part-1);
+$('#nextp').onclick=()=>goPart(ST.part===7?FINAL:ST.part===FINAL?MIP:ST.part===MIP?1:ST.part+1);
+if(![1,2,3,4,5,6,7,FINAL,MIP].includes(ST.part))ST.part=1;
 render();
 </script>
 </body>
