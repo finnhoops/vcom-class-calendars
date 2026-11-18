@@ -105,6 +105,11 @@ table.nums th{background:var(--field)}
 .fb{border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line)}
 .fb.ok{background:var(--good-bg);border-color:var(--good)} .fb.no{background:var(--bad-bg);border-color:var(--bad)}
 .fb h3{margin:0;font-size:1.15rem}
+.mcard{display:flex;flex-direction:column;gap:12px}
+.mlist{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.mlist li{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--field)}
+.mlist li.right{background:var(--good-bg);border-color:var(--good)}
+.mlist li .wy{display:block;font-size:.88rem;color:var(--muted);margin-top:4px}
 .opt .wy{display:block;font-size:.88rem;color:var(--muted);margin-top:4px}
 .opt .mk{margin-left:auto;flex:none;font-weight:700}
 .grid button.r::before,.grid button.w::before{content:none}
@@ -120,15 +125,47 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const IMG=f=>'../ekg-real/img/'+f;
-const ST={view:'home',t:null,att:{},hist:{},onlyMiss:false};
+const ST={view:'home',t:null,att:{},hist:{},onlyMiss:false,miss:{},fc:null};
 try{Object.assign(ST,JSON.parse(localStorage.getItem('ekg-tests')||'{}'))}catch(e){}
-if(!ST.att||typeof ST.att!=='object')ST.att={};if(!ST.hist||typeof ST.hist!=='object')ST.hist={};
+if(!ST.att||typeof ST.att!=='object')ST.att={};if(!ST.miss||typeof ST.miss!=='object')ST.miss={};
+// backfill the missed pile from answers already saved
+Object.entries(ST.att).forEach(([t,a])=>{if(a&&a.ans)Object.entries(a.ans).forEach(([qi,k])=>{const key=t+'-'+qi;if(k!==0&&!ST.miss[key]&&!(ST.missDone||{})[key])ST.miss[key]=1})});
+if(!ST.missDone||typeof ST.missDone!=='object')ST.missDone={};if(!ST.hist||typeof ST.hist!=='object')ST.hist={};
 const save=()=>{try{localStorage.setItem('ekg-tests',JSON.stringify(ST))}catch(e){}};
 function newAttempt(t){const T=TESTS[t];ST.att[t]={order:shuffle(T.map((_,i)=>i)),opts:T.map(q=>shuffle([0,1,2,3])),ans:{},flag:{},pos:0,done:false};save()}
 // option k: 0 = correct, 1..3 = wrong[k-1]
 const optText=(q,k)=>k===0?q[2]:q[4][k-1][0];
 function go(view,t){ST.view=view;if(t!==undefined)ST.t=t;save();render();window.scrollTo({top:0})}
-function render(){({home,take,results})[ST.view]?.()||home()}
+function render(){({home,take,results,cards})[ST.view]?.()||home()}
+const missKeys=t=>Object.keys(ST.miss).filter(k=>t===undefined||k.split('-')[0]==String(t)).filter(k=>{const[a,b]=k.split('-');return TESTS[a]&&TESTS[a][b]});
+function startCards(t){ST.fc={t:t===undefined?null:t,queue:shuffle(missKeys(t)).sort((a,b)=>ST.miss[b]-ST.miss[a]),shown:false,got:0,opts:{}};go('cards')}
+function cards(){
+  const F=ST.fc;if(!F)return home();
+  const scope=F.t===null?'all 3 tests':'Test '+(F.t+1);
+  const head=`<div class="navrow"><p class="eyebrow">Missed-question flashcards · ${scope}</p><button class="b ghost" type="button" id="fcx">Back to tests</button></div>`;
+  if(!F.queue.length){$('#app').innerHTML=`<section class="panel">${head}<p class="verdict ok" style="margin-top:10px">${F.got?`Done! You got through all ${F.got}.`:'No missed questions here yet.'}</p>
+    <div class="row" style="margin-top:10px">${missKeys(F.t===null?undefined:F.t).length?'<button class="b primary" type="button" id="fcre">Shuffle and go again</button>':''}</div></section>`;
+    $('#fcx').onclick=()=>{ST.fc=null;go('home')};const r=$('#fcre');if(r)r.onclick=()=>startCards(F.t===null?undefined:F.t);return true}
+  const key=F.queue[0],[t,qi]=key.split('-').map(Number),q=TESTS[t][qi];
+  const o=F.opts[key]||(F.opts[key]=shuffle([0,1,2,3]));
+  $('#app').innerHTML=`<section class="panel mcard">${head}
+    <div class="bar" aria-hidden="true"><i style="width:${F.got/(F.got+F.queue.length)*100}%"></i></div>
+    <p class="note">${F.queue.length} left · ${F.got} done · Test ${t+1} · ${esc(LEC[q[0]])} · missed ${ST.miss[key]}×</p>
+    ${q[5]?`<a class="strip" href="${IMG(q[5])}" target="_blank" rel="noopener"><img src="${IMG(q[5])}" alt="Rhythm strip for this question"></a>`:''}
+    <p class="q">${esc(q[1])}</p>
+    <ul class="mlist">${o.map((k,i)=>`<li class="${F.shown&&k===0?'right':''}"><b>${'ABCD'[i]}.</b> ${esc(optText(q,k))}${F.shown&&k===0?' <span class="corr">✓</span>':''}${F.shown&&k>0?`<span class="wy">Why it's wrong: ${esc(q[4][k-1][1])}</span>`:''}</li>`).join('')}</ul>
+    ${F.shown?`<div class="fb ok"><p class="why"><span class="corr">✓ Right answer:</span> <b style="color:inherit">${esc(q[2])}</b></p><p class="why"><b style="color:inherit">Why:</b> ${esc(q[3])}</p></div>
+      <div class="row"><button class="b bad" type="button" id="fca">Again</button><button class="b good" type="button" id="fcg">Got it</button></div>
+      <p class="note">"Again" brings it back in a few cards. "Got it" finishes it for this round. <button class="b ghost" type="button" id="fcrm" style="margin-left:6px">Remove from missed pile</button></p>`
+    :`<div class="row"><button class="b primary" type="button" id="fcs">Show answer</button></div><p class="note">Pick your answer in your head, then tap Show answer.</p>`}</section>`;
+  $('#fcx').onclick=()=>{ST.fc=null;go('home')};
+  const sh=$('#fcs');if(sh)sh.onclick=()=>{F.shown=true;save();cards()};
+  const nx=()=>{F.shown=false;save();cards();window.scrollTo({top:0})};
+  const ag=$('#fca');if(ag)ag.onclick=()=>{F.queue.shift();F.queue.splice(Math.min(3,F.queue.length),0,key);ST.miss[key]=(ST.miss[key]||0)+1;nx()};
+  const gt=$('#fcg');if(gt)gt.onclick=()=>{F.queue.shift();F.got++;nx()};
+  const rm=$('#fcrm');if(rm)rm.onclick=()=>{F.queue.shift();F.got++;delete ST.miss[key];ST.missDone[key]=1;nx()};
+  return true;
+}
 function home(){
   ST.view='home';
   $('#app').innerHTML=`<div class="tests">${TESTS.map((T,t)=>{const a=ST.att[t],h=ST.hist[t]||[];const best=h.length?Math.max(...h.map(x=>x.pct)):null;
@@ -139,8 +176,12 @@ function home(){
     <div class="row">${inprog?`<button class="b primary" type="button" data-resume="${t}">Resume (${Object.keys(a.ans).length}/${T.length} answered)</button><button class="b ghost" type="button" data-new="${t}">Start over</button>`
       :`<button class="b primary" type="button" data-new="${t}">${h.length?'Retake':'Start'} test ${t+1}</button>`}
       ${a&&a.done?`<button class="b ghost" type="button" data-rev="${t}">Review last attempt</button>`:''}</div></section>`}).join('')}
+    <section class="panel tcard"><p class="eyebrow">Study missed ones only</p><h2>Missed-question flashcards</h2>
+      <p class="note">Every question you get wrong goes here automatically. Flip through them as flashcards (no score) until you know them.</p>
+      ${missKeys().length?`<div class="row"><button class="b primary" type="button" data-fc="all">All missed (${missKeys().length})</button>${TESTS.map((_,t)=>missKeys(t).length?`<button class="b ghost" type="button" data-fc="${t}">Test ${t+1} (${missKeys(t).length})</button>`:'').join('')}</div>`:'<p class="note"><b>Nothing yet.</b> Miss a question on any test and it shows up here.</p>'}</section>
     <p class="note">How it works: tap an answer and you'll see right away if it's right or wrong, with why the right answer is right and why each wrong choice is wrong. When you're done, submit for your score by lecture and a full review. Each retake shuffles the question and answer order. Your progress saves on this device.</p></div>`;
   document.querySelectorAll('[data-new]').forEach(b=>b.onclick=()=>{const t=+b.dataset.new;if(ST.att[t]&&!ST.att[t].done&&Object.keys(ST.att[t].ans).length&&!b.dataset.c){b.dataset.c=1;b.textContent='Tap again to erase your answers';return}newAttempt(t);go('take',t)});
+  document.querySelectorAll('[data-fc]').forEach(b=>b.onclick=()=>startCards(b.dataset.fc==='all'?undefined:+b.dataset.fc));
   document.querySelectorAll('[data-resume]').forEach(b=>b.onclick=()=>go('take',+b.dataset.resume));
   document.querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>go('results',+b.dataset.rev));
   return true;
@@ -166,7 +207,7 @@ function take(){
     <section class="panel"><p class="eyebrow">Jump to a question</p><div class="grid">${a.order.map((x,i)=>`<button type="button" data-go="${i}" class="${a.ans[x]===undefined?'':a.ans[x]===0?'r':'w'}${i===a.pos?' cur':''}${a.flag[x]?' flg':''}" aria-label="Question ${i+1}">${i+1}</button>`).join('')}</div>
     <div class="row" style="margin-top:12px"><button class="b primary" type="button" id="submit">Submit test</button><button class="b ghost" type="button" id="exit">Save & exit</button></div>
     <p class="note" style="margin-top:8px" id="smsg">${n-answered?`${n-answered} unanswered.`:'All answered.'}${Object.keys(a.flag).length?` ${Object.keys(a.flag).length} flagged.`:''}</p></section>`;
-  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(a.ans[qi]!==undefined)return;a.ans[qi]=+b.dataset.k;save();take();$('#fb')?.scrollIntoView({behavior:'smooth',block:'nearest'})});
+  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(a.ans[qi]!==undefined)return;a.ans[qi]=+b.dataset.k;if(a.ans[qi]!==0){const key=t+'-'+qi;ST.miss[key]=(ST.miss[key]||0)+1;delete ST.missDone[key]}save();take();$('#fb')?.scrollIntoView({behavior:'smooth',block:'nearest'})});
   $('#prev').onclick=()=>{if(a.pos>0){a.pos--;save();take()}};
   $('#next').onclick=()=>{if(a.pos+1<n){a.pos++;save();take();window.scrollTo({top:0})}else $('#submit').scrollIntoView({behavior:'smooth'})};
   $('#flag').onclick=()=>{if(a.flag[qi])delete a.flag[qi];else a.flag[qi]=1;save();take()};
@@ -183,7 +224,7 @@ function results(){
   const items=a.order.map((qi,pos)=>({qi,pos,q:T[qi],ok:a.ans[qi]===0})).filter(x=>!ST.onlyMiss||!x.ok);
   $('#app').innerHTML=`<section class="panel"><p class="eyebrow">Test ${t+1} results</p><div class="row" style="justify-content:space-between;align-items:flex-end">
     <div><div class="score">${pct}%</div><p class="note">${right} of ${n} correct</p></div>
-    <div class="row"><button class="b primary" type="button" id="retake">Retake test ${t+1}</button><button class="b ghost" type="button" id="home">All tests</button></div></div>
+    <div class="row"><button class="b primary" type="button" id="retake">Retake test ${t+1}</button>${missKeys(t).length?`<button class="b ghost" type="button" id="stfc">Study missed as flashcards (${missKeys(t).length})</button>`:''}<button class="b ghost" type="button" id="home">All tests</button></div></div>
     <div class="tw" style="margin-top:12px"><table class="nums"><tr><th>Topic</th><th>Score</th></tr>${Object.keys(LEC).filter(k=>by[k]).map(k=>`<tr><td>${esc(LEC[k])}</td><td>${by[k].r}/${by[k].n}${by[k].r<by[k].n?' <span class="yours">· review</span>':''}</td></tr>`).join('')}</table></div></section>
     <section class="panel"><div class="row" style="justify-content:space-between"><h2 style="font-size:1.5rem">Review</h2>
       <div class="row"><button class="chip" type="button" id="fa" aria-pressed="${!ST.onlyMiss}">All (${n})</button><button class="chip" type="button" id="fm" aria-pressed="${ST.onlyMiss}">Missed (${n-right})</button></div></div>
@@ -194,7 +235,7 @@ function results(){
       ${!ok&&y!==undefined?`<p class="why"><span class="yours">✗ Your answer:</span> ${esc(optText(q,y))}<br><span class="note">Why it's wrong: ${esc(q[4][y-1][1])}</span></p>`:''}
       <p class="why"><span class="corr">✓ Correct:</span> <b style="color:inherit">${esc(q[2])}</b></p>
       <p class="src">${esc(q[3])}</p></div>`}).join(''):'<p>No missed questions. Nice work!</p>'}</div></section>`;
-  $('#retake').onclick=()=>{newAttempt(t);go('take',t)};$('#home').onclick=()=>go('home');
+  $('#retake').onclick=()=>{newAttempt(t);go('take',t)};$('#home').onclick=()=>go('home');const sf=$('#stfc');if(sf)sf.onclick=()=>startCards(t);
   $('#fa').onclick=()=>{ST.onlyMiss=false;save();results()};$('#fm').onclick=()=>{ST.onlyMiss=true;save();results()};
   return true;
 }
