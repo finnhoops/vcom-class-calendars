@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACLS PALS Groups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+:root{
+  --bg:#FFFFFF; --fg:#16232D; --muted:#5A6A76; --line:#C9D3DA; --ink:#3B4A55;
+  --q:#ECE7F7; --q-b:#5B3FA0; --drug:#FFF1C9; --drug-b:#C89412;
+  --no:#FBE3E0; --no-b:#B42318; --act:#E4F1F2; --act-b:#0E6A75;
+  --adult:#1F5FA8; --kid:#B5487A; --head:#F3F6F8;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F171C; --fg:#E4ECF0; --muted:#94A6B2; --line:#2A3A44; --ink:#9FB2BE;
+  --q:#272040; --q-b:#A58BEA; --drug:#3A2E0E; --drug-b:#E0B23C; --no:#3A1A17; --no-b:#FF8A7E;
+  --act:#13303A; --act-b:#4FB7C2; --adult:#7DB3F0; --kid:#F08DBA; --head:#172229; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F171C; --fg:#E4ECF0; --muted:#94A6B2; --line:#2A3A44; --ink:#9FB2BE;
+  --q:#272040; --q-b:#A58BEA; --drug:#3A2E0E; --drug-b:#E0B23C; --no:#3A1A17; --no-b:#FF8A7E;
+  --act:#13303A; --act-b:#4FB7C2; --adult:#7DB3F0; --kid:#F08DBA; --head:#172229; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-size:14px;line-height:1.35;padding:20px 16px 40px}
+.wrap{max-width:1060px;margin:0 auto}
+h1{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:2rem;margin:0;line-height:1}
+.sub{color:var(--muted);margin:4px 0 10px}
+.dl{display:inline-block;background:var(--act-b);color:var(--bg);font-weight:700;text-decoration:none;padding:10px 18px;border-radius:8px;margin:4px 0 10px}
+.qs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 12px}
+.qs .q{background:var(--q);border:2px solid var(--q-b);border-radius:16px;padding:5px 12px;font-weight:700}
+.qs .a{color:var(--muted);font-weight:700}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
+.rule{background:var(--act);border:2px solid var(--act-b);border-radius:8px;padding:7px 10px}
+.rule b{display:block;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:1.15rem}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{border:1px solid var(--line);padding:7px 9px;vertical-align:top;text-align:left}
+th{background:var(--head);font-size:.85em;text-transform:uppercase;letter-spacing:.05em}
+th.ad{color:var(--adult)} th.kd{color:var(--kid)}
+td.sc{width:17%}
+.num{display:inline-block;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:1.3rem;line-height:1;margin-right:4px}
+.sc b{font-size:1.08em}
+.sc .hint{display:block;color:var(--muted);font-size:.9em;margin-top:3px}
+td.do{width:26%}
+td.ad{border-left:4px solid var(--adult)} td.kd{border-left:4px solid var(--kid)}
+.dose{background:var(--drug);border:1px solid var(--drug-b);border-radius:5px;padding:0 5px;font-weight:700;white-space:nowrap}
+td.no{background:var(--no);width:15%;font-size:.92em}
+tr.grp td{background:var(--head);font-weight:700;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:1.1rem;letter-spacing:.02em;padding:4px 9px}
+.mem{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.box{border:2px solid var(--drug-b);background:var(--drug);border-radius:8px;padding:8px 12px}
+.box h3{margin:0 0 4px;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:1.2rem}
+.box ul{margin:0;padding-left:1.1em}
+@media (max-width:640px){.rules,.mem{grid-template-columns:1fr}}
+@media print{
+  @page{size:Letter landscape;margin:.3in}
+  body{padding:0;font-size:10.4px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .dl{display:none}
+  h1{font-size:1.7rem}
+  table{min-width:0}
+  th,td{padding:4px 6px}
+  .num{font-size:1.1rem}
+  .rules{margin-bottom:8px}.rule{padding:4px 8px}.rule b{font-size:1rem}
+  .mem{margin-top:8px}.box{padding:5px 9px}
+  .wrap{max-width:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>ACLS + PALS grouped: 6 scenarios, adults and kids side by side</h1>
+<p><a class="dl" href="ACLS%20PALS%20Groups.pdf" download>⬇ Download the PDF</a></p>
+<p class="sub">Ask 3 questions to find your row. The plan is the same for adults and kids; only the doses change.</p>
+<div class="qs"><span class="q">1. Is there a pulse?</span><span class="a">No → rows 1-2 (arrest) · Yes →</span><span class="q">2. Too slow or too fast?</span><span class="a">→</span><span class="q">3. Unstable?</span><span class="a">(low BP, confused, shock, chest pain, heart failure)</span></div>
+<div class="rules">
+  <div class="rule"><b>No pulse = CPR + epi</b>Every arrest gets CPR and epinephrine every 3-5 min. Shock only VF/VT.</div>
+  <div class="rule"><b>Unstable = electricity</b>Pulse but unstable: shock it with synchronized cardioversion (too fast) or pace it (too slow).</div>
+  <div class="rule"><b>Stable = drugs</b>Pulse and stable: you have time for vagal maneuvers and drugs.</div>
+</div>
+
+<div class="tw"><table>
+<tr><th>Scenario</th><th>What you do (adults and kids)</th><th class="ad">Adult doses</th><th class="kd">Kid doses (per kg)</th><th>Don't</th></tr>
+
+<tr class="grp"><td colspan="5">NO PULSE (cardiac arrest)</td></tr>
+<tr><td class="sc"><span class="num">1</span><b>Shockable</b><span class="hint">VF or pulseless VT</span></td>
+<td class="do"><b>Shock → CPR 2 min</b>, repeat.<br>After the 2nd shock: <b>epi</b>.<br>After the 3rd shock: <b>amiodarone</b>.</td>
+<td class="ad">Shock <span class="dose">120-200 J</span> biphasic<br>Epi <span class="dose">1 mg</span> every 3-5 min<br>Amio <span class="dose">300 mg</span> then <span class="dose">150 mg</span></td>
+<td class="kd">Shock <span class="dose">2 J/kg</span> then <span class="dose">4 J/kg</span><br>Epi <span class="dose">0.01 mg/kg</span> every 3-5 min<br>Amio <span class="dose">5 mg/kg</span></td>
+<td class="no">Don't give epi before the shocks. Don't pause CPR more than 10 s.</td></tr>
+<tr><td class="sc"><span class="num">2</span><b>Not shockable</b><span class="hint">Asystole or PEA</span></td>
+<td class="do"><b>Epi right away</b>, CPR 2 min, check rhythm, repeat. Hunt for the <b>H's and T's</b>.</td>
+<td class="ad">Epi <span class="dose">1 mg</span> ASAP, then every 3-5 min</td>
+<td class="kd">Epi <span class="dose">0.01 mg/kg</span> ASAP (within 3 min). Kids add <b>hypoglycemia</b> to the H's.</td>
+<td class="no">Never shock it. No amiodarone. No atropine.</td></tr>
+
+<tr class="grp"><td colspan="5">PULSE, BUT TOO SLOW</td></tr>
+<tr><td class="sc"><span class="num">3</span><b>Slow + symptoms</b><span class="hint">Adult under 50 · Kid under 60 with poor perfusion</span></td>
+<td class="do"><b>Adult:</b> atropine first; if it fails, pace or start a drip.<br><b>Kid:</b> <b>oxygen and bag-mask first</b> (low O2 is the usual cause). Still under 60 → <b>CPR + epi</b>.</td>
+<td class="ad">Atropine <span class="dose">1 mg</span> every 3-5 min, max <span class="dose">3 mg</span><br>Then pacing, dopamine <span class="dose">5-20 mcg/kg/min</span> or epi drip <span class="dose">2-10 mcg/min</span></td>
+<td class="kd">Epi <span class="dose">0.01 mg/kg</span><br>Atropine <span class="dose">0.02 mg/kg</span> (at least 0.1 mg) only for vagal causes or heart block</td>
+<td class="no">Don't treat a slow rate with no symptoms. Kids: don't skip ventilation.</td></tr>
+
+<tr class="grp"><td colspan="5">PULSE, BUT TOO FAST (adult 150 or more · infant 220 or more · child 180 or more)</td></tr>
+<tr><td class="sc"><span class="num">4</span><b>Fast + unstable</b><span class="hint">Any QRS</span></td>
+<td class="do"><b>Synchronized cardioversion</b> (sedate if you can). If an IV is in and it's regular and narrow, adenosine can be tried first.</td>
+<td class="ad">Sync cardioversion (AFib: at least <span class="dose">200 J</span>)</td>
+<td class="kd">Sync cardioversion <span class="dose">0.5-1 J/kg</span> then <span class="dose">2 J/kg</span></td>
+<td class="no">Don't use an unsynchronized shock on someone with a pulse.</td></tr>
+<tr><td class="sc"><span class="num">5</span><b>Fast + stable + narrow</b><span class="hint">SVT</span></td>
+<td class="do"><b>Vagal maneuvers → adenosine</b> (fast push + flush) <b>→ bigger adenosine dose</b>.</td>
+<td class="ad">Adenosine <span class="dose">6 mg</span> then <span class="dose">12 mg</span><br>Then a β-blocker or CCB</td>
+<td class="kd">Adenosine <span class="dose">0.1 mg/kg</span> (max 6) then <span class="dose">0.2 mg/kg</span> (max 12)</td>
+<td class="no">Kids: if it's sinus tach (slower, P waves, a cause like fever), treat the cause. No adenosine.</td></tr>
+<tr><td class="sc"><span class="num">6</span><b>Fast + stable + wide</b><span class="hint">QRS 0.12 s or more</span></td>
+<td class="do"><b>Antiarrhythmic + call an expert.</b> Adenosine only if regular with one shape. Cardiovert if drugs fail.</td>
+<td class="ad">Amio <span class="dose">150 mg</span> over 10 min (or procainamide)</td>
+<td class="kd">Get an expert</td>
+<td class="no">Don't give adenosine if it's irregular or has more than one shape.</td></tr>
+</table></div>
+
+<div class="mem">
+  <div class="box"><h3>Kid dose shortcut: "point-oh-one, 2-4, 5, point-one, point-oh-two"</h3>
+  <ul><li>Epi <b>0.01</b> mg/kg (= 0.1 mL/kg)</li><li>Shock <b>2</b> then <b>4</b> J/kg</li><li>Amio <b>5</b> mg/kg</li><li>Adenosine <b>0.1</b> then 0.2 mg/kg</li><li>Atropine <b>0.02</b> mg/kg</li></ul></div>
+  <div class="box"><h3>Adult dose shortcut: "1, 300-150, 6-12, 1 to 3"</h3>
+  <ul><li>Epi <b>1 mg</b> every 3-5 min</li><li>Amio <b>300</b> then <b>150</b> mg</li><li>Adenosine <b>6</b> then <b>12</b> mg</li><li>Atropine <b>1 mg</b>, max <b>3 mg</b></li><li>CPR: adults 30:2, kids 15:2 with 2 rescuers</li></ul></div>
+</div>
+</div>
+</body>
+</html>
