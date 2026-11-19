@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACLS & PALS Trees</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+:root{
+  --bg:#FFFFFF; --fg:#16232D; --muted:#5A6A76; --line:#3B4A55;
+  --act:#E4F1F2; --act-b:#0E6A75;
+  --q:#ECE7F7; --q-b:#5B3FA0;
+  --drug:#FFF1C9; --drug-b:#C89412;
+  --no:#FBE3E0; --no-b:#B42318;
+  --go:#E3F3E8; --go-b:#1C7C3F;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F171C; --fg:#E4ECF0; --muted:#94A6B2; --line:#9FB2BE;
+  --act:#13303A; --act-b:#4FB7C2; --q:#272040; --q-b:#A58BEA; --drug:#3A2E0E; --drug-b:#E0B23C;
+  --no:#3A1A17; --no-b:#FF8A7E; --go:#143222; --go-b:#6FD08F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F171C; --fg:#E4ECF0; --muted:#94A6B2; --line:#9FB2BE;
+  --act:#13303A; --act-b:#4FB7C2; --q:#272040; --q-b:#A58BEA; --drug:#3A2E0E; --drug-b:#E0B23C;
+  --no:#3A1A17; --no-b:#FF8A7E; --go:#143222; --go-b:#6FD08F; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-size:14px;line-height:1.35;padding:20px 16px 40px}
+.page{max-width:1000px;margin:0 auto 40px}
+h1{font-family:"Barlow Condensed",Arial Narrow,sans-serif;font-size:2rem;margin:0 0 2px;line-height:1}
+h2{font-family:"Barlow Condensed",Arial Narrow,sans-serif;font-size:1.6rem;margin:0 0 10px;line-height:1.05}
+.sub{color:var(--muted);margin:0 0 12px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;font-size:.8rem}
+.legend span{border:2px solid;border-radius:6px;padding:2px 8px}
+.top{max-width:1000px;margin:0 auto 16px}
+.chain{display:flex;flex-direction:column;align-items:center;min-width:0}
+.b{border:2px solid;border-radius:8px;padding:7px 10px;text-align:center;max-width:100%;width:100%}
+.b b{font-weight:700}
+.act{background:var(--act);border-color:var(--act-b)}
+.q{background:var(--q);border-color:var(--q-b);border-radius:18px;font-weight:700}
+.drug{background:var(--drug);border-color:var(--drug-b)}
+.drug .d{display:block;font-size:1.02rem;font-weight:700}
+.no{background:var(--no);border-color:var(--no-b)}
+.go{background:var(--go);border-color:var(--go-b)}
+.ar{width:2px;height:16px;background:var(--line);position:relative;flex:none;margin-bottom:6px}
+.ar::after{content:"";position:absolute;left:-5px;bottom:-6px;border:6px solid transparent;border-top:7px solid var(--line);border-bottom:0}
+.ar.lbl{height:22px}
+.ar span{position:absolute;left:8px;top:2px;font-size:.72rem;font-weight:700;white-space:nowrap;color:var(--muted)}
+.fork{display:grid;gap:14px;width:100%;position:relative;padding-top:16px;margin-top:12px}
+.fork::after{content:"";position:absolute;left:calc(50% - 1px);top:-12px;width:2px;height:12px;background:var(--line)}
+.fork.two{grid-template-columns:1fr 1fr}
+.fork.three{grid-template-columns:1fr 1fr 1fr}
+.fork::before{content:"";position:absolute;top:0;height:2px;background:var(--line)}
+.fork.two::before{left:25%;right:25%}
+.fork.three::before{left:16.67%;right:16.67%}
+.fork>.chain::before{content:"";width:2px;height:16px;background:var(--line);margin-top:-16px}
+.tag{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px;margin:4px 0 4px;border:2px solid}
+.tag.y{color:var(--go-b);border-color:var(--go-b)} .tag.n{color:var(--no-b);border-color:var(--no-b)} .tag.m{color:var(--q-b);border-color:var(--q-b)}
+.loop{font-size:.8rem;color:var(--muted);text-align:center;margin-top:4px}
+.donts{margin-top:14px;display:grid;gap:8px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.small{font-size:.8rem;color:var(--muted)}
+@media (max-width:640px){.cols{grid-template-columns:1fr}.fork.three{grid-template-columns:1fr}.fork.three::before{display:none}.fork.three>.chain::before{display:none}body{font-size:13px}}
+@media print{
+  @page{size:Letter landscape;margin:.35in}
+  body{padding:0;font-size:11.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page{break-after:page;margin:0;max-width:none}
+  .page:last-child{break-after:auto}
+  .top{zoom:.85}
+  .page:first-of-type{zoom:.8}
+  .top{margin:0 0 6px}
+  h2{font-size:1.45rem;margin-bottom:6px}
+  .b{padding:5px 8px}
+  .ar{height:12px}.fork{padding-top:12px;margin-top:10px}.fork::after{top:-10px;height:10px}.fork>.chain::before{height:12px;margin-top:-12px}
+}
+</style>
+</head>
+<body>
+<div class="top">
+<h1>ACLS &amp; PALS: what to do, what to give, what's next</h1>
+<p class="sub">Follow the arrows. Every 2 minutes of CPR you check the rhythm and come back into the tree.</p>
+<div class="legend"><span class="q" style="border-color:var(--q-b);background:var(--q)">Question</span><span class="act" style="border-color:var(--act-b);background:var(--act)">Do this</span><span style="border-color:var(--drug-b);background:var(--drug)">Give this drug (dose)</span><span style="border-color:var(--no-b);background:var(--no)">Don't do this</span><span style="border-color:var(--go-b);background:var(--go)">Goal / next stop</span></div>
+</div>
+
+<!-- ============ PAGE 1: ADULT ARREST ============ -->
+<section class="page">
+<h2>1. Adult cardiac arrest (no pulse)</h2>
+<div class="chain">
+  <div class="b act" style="max-width:560px"><b>Start CPR now.</b> 100-120/min, at least 2 inches, 30:2. Give O2, put on the pads/monitor.</div>
+  <div class="ar"></div>
+  <div class="b q" style="max-width:340px">Is the rhythm shockable?</div>
+  <div class="fork two">
+    <div class="chain">
+      <div class="tag m">Yes: VF or pulseless VT</div>
+      <div class="b act"><b>SHOCK</b> (biphasic 120-200 J, or 360 J monophasic)</div>
+      <div class="ar"></div>
+      <div class="b act">CPR 2 min. Get an IV (or IO).</div>
+      <div class="ar lbl"><span>still VF/VT</span></div>
+      <div class="b act"><b>SHOCK</b> again</div>
+      <div class="ar"></div>
+      <div class="b drug">CPR 2 min + <span class="d">Epinephrine 1 mg IV</span>then every 3-5 min. Think about an airway + ETCO2.</div>
+      <div class="ar lbl"><span>still VF/VT</span></div>
+      <div class="b act"><b>SHOCK</b> again</div>
+      <div class="ar"></div>
+      <div class="b drug">CPR 2 min + <span class="d">Amiodarone 300 mg</span>2nd dose 150 mg. (Or lidocaine 1-1.5 mg/kg, then 0.5-0.75 mg/kg.)</div>
+      <div class="ar"></div>
+      <div class="b act">Keep looping: shock → CPR 2 min → epi every 3-5 min. Treat the <b>H's and T's</b>.</div>
+    </div>
+    <div class="chain">
+      <div class="tag m">No: asystole or PEA</div>
+      <div class="b drug"><span class="d">Epinephrine 1 mg IV ASAP</span>then every 3-5 min</div>
+      <div class="ar"></div>
+      <div class="b act">CPR 2 min. Get IV/IO. Think about an airway + ETCO2.</div>
+      <div class="ar"></div>
+      <div class="b q">Rhythm check: shockable now?</div>
+      <div class="ar lbl"><span>no</span></div>
+      <div class="b act">CPR 2 min + treat the <b>H's and T's</b>. Keep giving epi every 3-5 min.</div>
+      <div class="loop">If it turns shockable → jump to the left side and shock.</div>
+      <div class="ar" style="margin-top:6px"></div>
+      <div class="b act" style="text-align:left"><b>H's:</b> hypovolemia, hypoxia, H+ (acidosis), hypo/hyperkalemia, hypothermia<br><b>T's:</b> tension pneumo, tamponade, toxins, thrombosis (PE), thrombosis (MI)</div>
+    </div>
+  </div>
+  <div class="ar" style="margin-top:10px"></div>
+  <div class="b go" style="max-width:760px"><b>Pulse back (ROSC)?</b> You'll see a pulse/BP or a sudden jump in ETCO2. → Post-arrest goals: <b>SpO2 90-98%</b>, <b>PaCO2 35-45</b>, <b>MAP 65 or more</b>, get a 12-lead. Not following commands → temperature control 32-37.5 °C for at least 36 h.</div>
+  <div class="donts cols" style="width:100%;max-width:760px">
+    <div class="b no"><b>Don't</b> shock asystole or PEA. Don't give amiodarone for them either.</div>
+    <div class="b no"><b>Don't</b> give atropine or vasopressin in an arrest. Don't stop CPR for more than 10 seconds.</div>
+  </div>
+</div>
+</section>
+
+<!-- ============ PAGE 2: ADULT BRADY + TACHY ============ -->
+<section class="page">
+<h2>2. Adult slow or fast heart rate (has a pulse)</h2>
+<div class="cols">
+  <div class="chain">
+    <div class="b act"><b>Bradycardia:</b> heart rate under 50</div>
+    <div class="ar"></div>
+    <div class="b q">Symptoms? Low BP, confused, shock, chest pain or heart failure</div>
+    <div class="fork two">
+      <div class="chain">
+        <div class="tag m">No symptoms</div>
+        <div class="b go">Watch them and look for the cause (drugs like β-blockers/CCBs, MI, low O2, high K).</div>
+      </div>
+      <div class="chain">
+        <div class="tag m">Yes, symptoms</div>
+        <div class="b drug"><span class="d">Atropine 1 mg IV</span>repeat every 3-5 min, max 3 mg</div>
+        <div class="ar lbl"><span>didn't work</span></div>
+        <div class="b drug">Pick one: <b>pacing</b> (through the skin), <span class="d">Dopamine 5-20 mcg/kg/min</span>or <span class="d">Epi drip 2-10 mcg/min</span></div>
+        <div class="ar"></div>
+        <div class="b go">Call an expert. Think about transvenous pacing.</div>
+      </div>
+    </div>
+    <div class="donts" style="width:100%"><div class="b no"><b>Don't</b> treat a slow rate with no symptoms. Don't keep giving atropine past 3 mg.</div></div>
+  </div>
+
+  <div class="chain">
+    <div class="b act"><b>Tachycardia:</b> heart rate 150 or more</div>
+    <div class="ar"></div>
+    <div class="b q">Unstable? Same 5 signs: low BP, confused, shock, chest pain, heart failure</div>
+    <div class="fork two">
+      <div class="chain">
+        <div class="tag m">Yes, unstable</div>
+        <div class="b drug"><span class="d">Synchronized cardioversion</span>Sedate if you can. Regular + narrow: you can try adenosine first.</div>
+      </div>
+      <div class="chain">
+        <div class="tag m">No, stable</div>
+        <div class="b q">Is the QRS wide? (0.12 s or more)</div>
+        <div class="fork two" style="gap:8px">
+          <div class="chain">
+            <div class="tag m">Narrow</div>
+            <div class="b act">Vagal maneuvers</div>
+            <div class="ar"></div>
+            <div class="b drug"><span class="d">Adenosine 6 mg</span>fast push + flush, then <b>12 mg</b></div>
+            <div class="ar"></div>
+            <div class="b drug">β-blocker or calcium channel blocker</div>
+          </div>
+          <div class="chain">
+            <div class="tag m">Wide</div>
+            <div class="b act">Adenosine only if regular + one shape</div>
+            <div class="ar"></div>
+            <div class="b drug"><span class="d">Amiodarone 150 mg</span>over 10 min (or procainamide)</div>
+            <div class="ar"></div>
+            <div class="b go">Call an expert. Cardiovert if drugs fail.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="donts" style="width:100%"><div class="b no"><b>Don't</b> use an unsynchronized shock on someone with a pulse. That's only for VF/pulseless VT.</div></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ PAGE 3: PALS ARREST ============ -->
+<section class="page">
+<h2>3. PALS: child in cardiac arrest (no pulse)</h2>
+<div class="chain">
+  <div class="b act" style="max-width:640px"><b>Start CPR now.</b> 100-120/min, 1/3 of the chest depth. <b>15:2</b> with 2 rescuers, 30:2 with 1. Give O2 (kids usually arrest from breathing problems). Pads/monitor on.</div>
+  <div class="ar"></div>
+  <div class="b q" style="max-width:340px">Is the rhythm shockable?</div>
+  <div class="fork two">
+    <div class="chain">
+      <div class="tag m">Yes: VF or pulseless VT</div>
+      <div class="b act"><b>SHOCK 2 J/kg</b></div>
+      <div class="ar"></div>
+      <div class="b act">CPR 2 min. Get an IV or IO.</div>
+      <div class="ar lbl"><span>still VF/VT</span></div>
+      <div class="b act"><b>SHOCK 4 J/kg</b></div>
+      <div class="ar"></div>
+      <div class="b drug">CPR 2 min + <span class="d">Epinephrine 0.01 mg/kg</span>(0.1 mL/kg), max 1 mg, every 3-5 min</div>
+      <div class="ar lbl"><span>still VF/VT</span></div>
+      <div class="b act"><b>SHOCK 4 J/kg or more</b> (max 10 J/kg)</div>
+      <div class="ar"></div>
+      <div class="b drug">CPR 2 min + <span class="d">Amiodarone 5 mg/kg</span>can repeat up to 3 doses</div>
+      <div class="ar"></div>
+      <div class="b act">Keep looping. Treat the H's and T's <b>+ hypoglycemia</b>.</div>
+    </div>
+    <div class="chain">
+      <div class="tag m">No: asystole or PEA</div>
+      <div class="b drug"><span class="d">Epinephrine 0.01 mg/kg ASAP</span>(0.1 mL/kg), best within 3 min. Then every 3-5 min.</div>
+      <div class="ar"></div>
+      <div class="b act">CPR 2 min. Get IV/IO.</div>
+      <div class="ar"></div>
+      <div class="b q">Rhythm check: shockable now?</div>
+      <div class="ar lbl"><span>no</span></div>
+      <div class="b act">CPR 2 min + treat the H's and T's <b>+ hypoglycemia</b>. Epi every 3-5 min.</div>
+      <div class="loop">If it turns shockable → jump to the left side and shock.</div>
+      <div class="ar" style="margin-top:6px"></div>
+      <div class="b go" style="text-align:left"><b>Example: 20 kg child</b><br>Shocks: 40 J, then 80 J<br>Epi: 0.2 mg = 2 mL<br>Amio: 100 mg</div>
+    </div>
+  </div>
+  <div class="donts cols" style="width:100%;max-width:760px">
+    <div class="b no"><b>Don't</b> shock asystole or PEA. Don't wait to give epi in asystole/PEA.</div>
+    <div class="b no"><b>Don't</b> use adult doses. Everything is per kg (epi max 1 mg).</div>
+  </div>
+</div>
+</section>
+
+<!-- ============ PAGE 4: PALS BRADY + SVT ============ -->
+<section class="page">
+<h2>4. PALS: child with a slow or fast heart rate (has a pulse)</h2>
+<div class="cols">
+  <div class="chain">
+    <div class="b act"><b>Bradycardia</b> with poor perfusion</div>
+    <div class="ar"></div>
+    <div class="b act"><b>Fix breathing first:</b> open the airway, O2, bag-mask ventilate. Low oxygen is the usual cause.</div>
+    <div class="ar"></div>
+    <div class="b q">Still under 60 with poor perfusion?</div>
+    <div class="fork two">
+      <div class="chain">
+        <div class="tag m">No, it's better</div>
+        <div class="b go">Keep supporting breathing, watch closely, find the cause.</div>
+      </div>
+      <div class="chain">
+        <div class="tag m">Yes</div>
+        <div class="b act"><b>Start CPR</b></div>
+        <div class="ar"></div>
+        <div class="b drug"><span class="d">Epinephrine 0.01 mg/kg</span>every 3-5 min</div>
+        <div class="ar lbl"><span>vagal or heart block?</span></div>
+        <div class="b drug"><span class="d">Atropine 0.02 mg/kg</span>(at least 0.1 mg)</div>
+        <div class="ar"></div>
+        <div class="b go">Think about pacing. Lose the pulse → go to the arrest tree.</div>
+      </div>
+    </div>
+    <div class="donts" style="width:100%"><div class="b no"><b>Don't</b> skip ventilation and jump to drugs. Atropine is not the first drug unless it's vagal or a heart block.</div></div>
+  </div>
+
+  <div class="chain">
+    <div class="b act"><b>Fast heart rate</b></div>
+    <div class="ar"></div>
+    <div class="b q">Sinus tach or SVT?</div>
+    <div class="fork two">
+      <div class="chain">
+        <div class="tag m">Sinus tach</div>
+        <div class="b act">Infant under 220, child under 180. Normal P waves. There's a cause (fever, pain, dehydration).</div>
+        <div class="ar"></div>
+        <div class="b go">Treat the cause. No adenosine, no shock.</div>
+      </div>
+      <div class="chain">
+        <div class="tag m">SVT</div>
+        <div class="b act">Infant <b>220 or more</b>, child <b>180 or more</b>. No P waves, steady rate.</div>
+        <div class="ar"></div>
+        <div class="b q">Unstable? (low BP, altered)</div>
+        <div class="fork two" style="gap:8px">
+          <div class="chain">
+            <div class="tag m">Stable</div>
+            <div class="b act">Vagal maneuvers</div>
+            <div class="ar"></div>
+            <div class="b drug"><span class="d">Adenosine 0.1 mg/kg</span>fast push (max 6 mg), then <b>0.2 mg/kg</b> (max 12)</div>
+          </div>
+          <div class="chain">
+            <div class="tag m">Unstable</div>
+            <div class="b drug"><span class="d">Sync cardioversion 0.5-1 J/kg</span>then 2 J/kg</div>
+            <div class="loop">IV already in? You can give adenosine first.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="donts" style="width:100%"><div class="b no"><b>Don't</b> give adenosine or shock for sinus tach. Fix the fever, pain or fluids instead.</div></div>
+  </div>
+</div>
+</section>
+</body>
+</html>
