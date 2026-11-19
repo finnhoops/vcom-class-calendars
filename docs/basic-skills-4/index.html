@@ -158,7 +158,10 @@ function render(){
   $('#nextp').textContent=ST.part===10?'Go to final mix':ST.part===FINAL?'Back to part 1':'Next part';
   renderFc();renderCk();
 }
-const FC={kind:'all',flipped:false,browse:false};
+if(!ST.fcqs||typeof ST.fcqs!=='object')ST.fcqs={};
+const FC={kind:ST.fckind||'all',flipped:false,browse:false};
+const fkey=()=>ST.part+'|'+FC.kind;
+const fq=()=>{const q=ST.fcqs[fkey()];if(q&&(!Array.isArray(q.queue)||q.queue.some(id=>!CBY[id])))delete ST.fcqs[fkey()];return ST.fcqs[fkey()]};
 const qStat=c=>c[4]==='f'?ST.stats[c[0].slice(1)]:null;
 const tScore=c=>(((qStat(c)||{}).miss)||0)+(ST.again[c[0]]||0);
 const isTrouble=c=>{const v=ST.pin[c[0]];return v===1||(v!==-1&&tScore(c)>=1)};
@@ -170,14 +173,14 @@ const deckOf=p=>CARDS.filter(c=>(p===FINAL||c[1]===p)&&kindOk(c,FC.kind));
 const K=()=>FC.kind==='miss'?ST.mknown:ST.known;
 function fcStart(){const d=deckOf(ST.part).filter(c=>!K()[c[0]]);let order;
   if(FC.kind==='miss')order=shuffle(d).sort((a,b)=>tScore(b)-tScore(a));else{const m=shuffle(d.filter(c=>c[4]==='m')),f=shuffle(d.filter(c=>c[4]==='f'));order=[...m,...f]}
-  ST.fcq={part:ST.part,kind:FC.kind,queue:order.map(c=>c[0])};FC.flipped=false;save();renderFc()}
+  ST.fcqs[fkey()]={part:ST.part,kind:FC.kind,queue:order.map(c=>c[0]),hist:[]};FC.flipped=false;save();renderFc()}
 function renderFc(){
-  const el=$('#fc'),p=ST.part,deck=deckOf(p),known=deck.filter(c=>K()[c[0]]).length,q=ST.fcq;
+  const el=$('#fc'),p=ST.part,deck=deckOf(p),known=deck.filter(c=>K()[c[0]]).length,q=fq();
   const kinds=[['all','All cards'],['m','Memory tricks'],['f','Facts'],['miss','Missed']];
   const head=`<p class="eyebrow">Flashcards · ${p===FINAL?'all parts':'part '+p}</p><div class="row" style="justify-content:space-between"><h2>Flashcards</h2><span class="note">Known <b>${known}</b>/<b>${deck.length}</b></span></div>
     <div class="row" style="margin-top:8px"><button class="b ghost" type="button" id="fcbrowse">${FC.browse?'← Back to studying':'☰ See all cards'}</button></div>
     <div class="row" style="margin-top:8px">${kinds.map(([k,l])=>`<button class="chip" type="button" data-kind="${k}" aria-pressed="${FC.kind===k}">${k==='miss'?'⚑ ':''}${l} (${CARDS.filter(c=>(p===FINAL||c[1]===p)&&kindOk(c,k)).length})</button>`).join('')}</div>`;
-  const wireHead=()=>{el.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{FC.kind=b.dataset.kind;FC.flipped=false;renderFc()});const bb=$('#fcbrowse');if(bb)bb.onclick=()=>{FC.browse=!FC.browse;renderFc();el.scrollIntoView({behavior:'smooth',block:'start'})}};
+  const wireHead=()=>{el.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{FC.kind=b.dataset.kind;ST.fckind=FC.kind;save();FC.flipped=false;renderFc()});const bb=$('#fcbrowse');if(bb)bb.onclick=()=>{FC.browse=!FC.browse;renderFc();el.scrollIntoView({behavior:'smooth',block:'start'})}};
   if(FC.browse){
     el.innerHTML=head+`<p class="note" style="margin-top:10px">${deck.length} card${deck.length===1?'':'s'}${FC.kind==='miss'?' in your Missed pile':''}. Tap "Show answer" to check one, and ⚑ to add it to (or remove it from) your Missed pile.</p>`+
       (deck.length?`<ol style="list-style:none;padding:0;margin:10px 0 0;display:grid;gap:10px">${deck.map(c=>`<li style="border:1px solid var(--line,#2a3a44);border-radius:12px;padding:12px 14px">
@@ -190,7 +193,7 @@ function renderFc(){
       const on=isTrouble(CBY[id]);b.setAttribute('aria-pressed',on);b.textContent=on?'✓ In Missed pile (tap to remove)':'⚑ Add to Missed pile';
       const ch=el.querySelector('[data-kind="miss"]');if(ch)ch.textContent='⚑ Missed ('+CARDS.filter(x=>(p===FINAL||x[1]===p)&&kindOk(x,'miss')).length+')'});
     return}
-  const active=q&&q.part===p&&q.kind===FC.kind&&q.queue.length;
+  const active=q&&q.queue.length;
   if(!active){
     const left=deck.length-known;
     if(FC.kind==='miss'&&!deck.length){el.innerHTML=head+`<p style="margin-top:10px">Nothing here yet. Any quiz question you get wrong, or any flashcard you press "Again" on, in ${p===FINAL?'any part':'part '+p} lands here the first time you miss it. You can also add any card yourself with the ⚑ Add to Missed pile button.</p>`;wireHead();return}
@@ -204,16 +207,22 @@ function renderFc(){
       <span class="front">${esc(c[2])}</span>${FC.flipped?`<span class="back">${esc(c[3])}</span>`:'<span class="note">Tap to flip</span>'}</button>
       ${FC.flipped?`<div class="fcbtns"><button class="b bad" type="button" id="fcagain">Again</button><button class="b good" type="button" id="fcgot">Got it</button></div>`:''}
       <div class="row" style="margin-top:8px">${pinHtml(c[0])}</div>
-      <p class="note" style="margin-top:8px">${q.queue.length} left in this round · Space flips · 1 = Again · 2 = Got it</p>`;
+      <div class="navrow" style="margin-top:8px"><button class="b ghost" type="button" id="fcback" ${(q.hist||[]).length?'':'disabled style="visibility:hidden"'}>← Previous card</button><button class="b ghost" type="button" id="fcskip">Skip →</button></div>
+      <p class="note" style="margin-top:8px">${q.queue.length} left in this round · Your place is saved, even if you switch tabs or close the page · Space flips · 1 = Again · 2 = Got it · ← back</p>`;
     $('#fccard').onclick=()=>{FC.flipped=!FC.flipped;renderFc()};
     if(FC.flipped){$('#fcagain').onclick=()=>fcMark(false);$('#fcgot').onclick=()=>fcMark(true)}
+    const fb=$('#fcback');if(fb)fb.onclick=fcBack;
+    $('#fcskip').onclick=()=>{if(q.queue.length>1)q.queue.push(q.queue.shift());FC.flipped=false;save();renderFc()};
     wirePins(el,renderFc);
   }
   wireHead();
   const g=$('#fcgo');if(g)g.onclick=fcStart;
-  const r=$('#fcreset');if(r)r.onclick=()=>{if(r.dataset.c){deck.forEach(c=>delete K()[c[0]]);ST.fcq=null;save();renderFc()}else{r.dataset.c=1;r.textContent='Tap again to reset'}};
+  const r=$('#fcreset');if(r)r.onclick=()=>{if(r.dataset.c){deck.forEach(c=>delete K()[c[0]]);delete ST.fcqs[fkey()];save();renderFc()}else{r.dataset.c=1;r.textContent='Tap again to reset'}};
 }
-function fcMark(ok){const q=ST.fcq,id=q.queue.shift();
+function fcBack(){const q=fq();if(!q||!(q.hist||[]).length)return;const [id,ok]=q.hist.pop();
+  if(ok)delete K()[id];else{const i=q.queue.indexOf(id);if(i>=0)q.queue.splice(i,1);if(ST.again[id])ST.again[id]--}
+  q.queue.unshift(id);FC.flipped=false;save();renderFc()}
+function fcMark(ok){const q=fq(),id=q.queue.shift();(q.hist=q.hist||[]).push([id,ok?1:0]);if(q.hist.length>200)q.hist.shift();
   if(ok)(q.kind==='miss'?ST.mknown:ST.known)[id]=1;else{ST.again[id]=(ST.again[id]||0)+1;if(ST.pin[id]===-1)delete ST.pin[id];delete (q.kind==='miss'?ST.mknown:ST.known)[id];q.queue.splice(Math.min(3,q.queue.length),0,id)}
   FC.flipped=false;save();renderFc();if(!q.queue.length)renderFc()}
 function renderCk(){
@@ -270,7 +279,7 @@ function answer(i){
 }
 document.addEventListener('keydown',e=>{if($('#fccard')&&!e.metaKey&&!e.ctrlKey&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)){
     if(e.key===' '){e.preventDefault();FC.flipped=!FC.flipped;renderFc();return}
-    if(FC.flipped&&e.key==='1'){fcMark(false);return}if(FC.flipped&&e.key==='2'){fcMark(true);return}}});
+    if(e.key==='ArrowLeft'&&$('#fcback')){fcBack();return}if(FC.flipped&&e.key==='1'){fcMark(false);return}if(FC.flipped&&e.key==='2'){fcMark(true);return}}});
 document.addEventListener('keydown',e=>{const C=window.CUR;if(!C||!$('#ck .opts'))return;const k=e.key.toUpperCase();
   if(!C.answered&&k.length===1&&'ABCD'.includes(k)&&!e.metaKey&&!e.ctrlKey){const i='ABCD'.indexOf(k);if(i<C.opts.length)answer(i)}});
 $('#prev').onclick=()=>goPart(ST.part===FINAL?10:ST.part-1);
