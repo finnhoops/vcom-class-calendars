@@ -123,10 +123,13 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const byId=Object.fromEntries(QS.map(q=>[q[0],q]));
-const ST={part:1,stats:{},passed:{},quiz:null,known:{},fcq:null,again:{},mknown:{},pin:{}};
+const ST={part:1,stats:{},passed:{},quiz:null,quizzes:{},known:{},fcq:null,again:{},mknown:{},pin:{}};
 try{Object.assign(ST,JSON.parse(localStorage.getItem('phys4-review')||'{}'))}catch(e){}
 if(!ST.stats||typeof ST.stats!=='object')ST.stats={};if(!ST.known||typeof ST.known!=='object')ST.known={};if(!ST.passed||typeof ST.passed!=='object')ST.passed={};if(!ST.again||typeof ST.again!=='object')ST.again={};if(!ST.mknown||typeof ST.mknown!=='object')ST.mknown={};if(!ST.pin||typeof ST.pin!=='object')ST.pin={};
 if(ST.quiz&&(!Array.isArray(ST.quiz.queue)||ST.quiz.queue.some(id=>!byId[id])))ST.quiz=null;
+if(!ST.quizzes||typeof ST.quizzes!=='object')ST.quizzes={};
+for(const k in ST.quizzes){const z=ST.quizzes[k];if(!z||!Array.isArray(z.queue)||z.queue.some(id=>!byId[id]))delete ST.quizzes[k]}
+if(ST.quiz&&ST.quiz.part!==ST.part){ST.quizzes[ST.quiz.part]=ST.quiz;ST.quiz=ST.quizzes[ST.part]||null;delete ST.quizzes[ST.part]}
 const save=()=>{try{localStorage.setItem('phys4-review',JSON.stringify(ST))}catch(e){}};
 const FINAL=9;
 const partName=p=>p===FINAL?'Final mix':`Part ${p}`;
@@ -148,7 +151,7 @@ function renderTabs(){
     const b=document.createElement('button');b.type='button';b.className='chip'+(ST.passed[id]?' passed':'');b.textContent=(ST.passed[id]?'✓ ':'')+l;
     b.setAttribute('aria-pressed',ST.part===id);b.onclick=()=>{goPart(id)};t.appendChild(b)});
 }
-function goPart(id){ST.part=id;if(ST.quiz&&ST.quiz.part!==id)ST.quiz=null;save();render();window.scrollTo({top:0,behavior:'smooth'})}
+function goPart(id){if(id!==ST.part){if(ST.quiz)ST.quizzes[ST.quiz.part]=ST.quiz;else delete ST.quizzes[ST.part];ST.part=id;ST.quiz=ST.quizzes[id]||null;delete ST.quizzes[id]}save();render();window.scrollTo({top:0,behavior:'smooth'})}
 function render(){
   renderStats();renderTabs();
   const g=$('#guide');
@@ -258,7 +261,8 @@ function renderCk(){
     <div class="qcard"><div class="qmeta"><span>Question ${q.pos+1} of ${q.queue.length}</span><span>${q.right} right${p===FINAL?' · part '+Q[1]:''}</span></div>
     <p class="q">${esc(Q[2])}</p>
     <div class="opts">${opts.map((o,i)=>`<button class="opt" type="button" data-i="${i}"><span class="k">${'ABCD'[i]}</span><span>${esc(o.t)}</span></button>`).join('')}</div>
-    <div class="fb" id="fb" hidden></div></div>`;
+    <div class="fb" id="fb" hidden></div></div>
+    <p class="note" style="margin-top:8px">Your place in each part's quiz is saved, even if you switch parts or close the page.</p>`;
   c.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.i));
 }
 function start(list){ST.quiz={part:ST.part,queue:list,pos:0,right:0,round:1,roundMiss:[]};save();renderCk();$('#ck').scrollIntoView({behavior:'smooth',block:'start'})}
@@ -285,6 +289,8 @@ document.addEventListener('keydown',e=>{const C=window.CUR;if(!C||!$('#ck .opts'
 $('#prev').onclick=()=>goPart(ST.part===FINAL?8:ST.part-1);
 $('#nextp').onclick=()=>goPart(ST.part===8?FINAL:ST.part===FINAL?1:ST.part+1);
 if(![1,2,3,4,5,6,7,8,FINAL].includes(ST.part))ST.part=1;
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save()});
+window.addEventListener('pagehide',save);
 render();
 </script>
 </body>
